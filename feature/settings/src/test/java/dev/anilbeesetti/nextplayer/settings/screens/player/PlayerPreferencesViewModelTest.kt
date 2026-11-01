@@ -22,7 +22,7 @@ class PlayerPreferencesViewModelTest {
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(dispatcher = dispatcher)
+        Dispatchers.setMain(dispatcher)
     }
 
     @After
@@ -31,45 +31,51 @@ class PlayerPreferencesViewModelTest {
     }
 
     @Test
-    fun toggleTunneledPlaybackUpdatesRepositoryAndScreenState() = runTest(context = dispatcher) {
+    fun toggleTunneledPlaybackUpdatesRepositoryAndScreenState() = runTest(dispatcher) {
         repository.updatePlayerPreferences {
-            it.copy(
-                autoplay = false,
-                preferredAudioLanguage = "en",
-            )
+            it.copy(autoplay = false, preferredAudioLanguage = "en")
         }
         val original = repository.playerPreferences.value
-        val viewModel = PlayerPreferencesViewModel(
-            preferencesRepository = repository,
-            PlayerPreferencesViewModel.Output(navigateUp = {}),
-        )
+        val viewModel = PlayerPreferencesViewModel(repository, PlayerPreferencesViewModel.Output(navigateUp = {}))
 
-        viewModel.onAction(action = PlayerPreferencesUiEvent.ToggleTunneledPlayback)
+        viewModel.onAction(PlayerPreferencesUiEvent.ToggleTunneledPlayback)
         advanceUntilIdle()
 
         assertTrue(repository.playerPreferences.value.enableTunneledPlayback)
-        assertEquals(
-            original.copy(enableTunneledPlayback = true),
-            viewModel.state.value.preferences,
-        )
+        assertEquals(original.copy(enableTunneledPlayback = true), viewModel.state.value.preferences)
 
-        viewModel.onAction(action = PlayerPreferencesUiEvent.ToggleTunneledPlayback)
+        viewModel.onAction(PlayerPreferencesUiEvent.ToggleTunneledPlayback)
         advanceUntilIdle()
 
         assertFalse(repository.playerPreferences.value.enableTunneledPlayback)
-        assertEquals(
-            original,
-            viewModel.state.value.preferences,
-        )
+        assertEquals(original, viewModel.state.value.preferences)
     }
 
     @Test
-    fun screenRestoresSavedTunneledPlaybackPreference() = runTest(context = dispatcher) {
+    fun customDurationsPersistAcrossScreenRecreationAndDisableWithoutLosingValues() = runTest(dispatcher) {
+        val viewModel = PlayerPreferencesViewModel(repository, PlayerPreferencesViewModel.Output(navigateUp = {}))
+        viewModel.onAction(PlayerPreferencesUiEvent.UpdateCustomSkipDurations(90, 60))
+        viewModel.onAction(PlayerPreferencesUiEvent.ToggleCustomSkipIntroOutro)
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value.preferences.customSkipIntroOutro)
+        assertEquals(90, viewModel.state.value.preferences.customIntroSeconds)
+        assertEquals(60, viewModel.state.value.preferences.customOutroSeconds)
+        viewModel.onAction(PlayerPreferencesUiEvent.ToggleCustomSkipIntroOutro)
+        advanceUntilIdle()
+        val recreated = PlayerPreferencesViewModel(repository, PlayerPreferencesViewModel.Output(navigateUp = {}))
+        assertFalse(recreated.state.value.preferences.customSkipIntroOutro)
+        assertEquals(90, recreated.state.value.preferences.customIntroSeconds)
+        assertEquals(60, recreated.state.value.preferences.customOutroSeconds)
+        viewModel.onAction(PlayerPreferencesUiEvent.UpdateCustomSkipDurations(-10, Int.MAX_VALUE))
+        advanceUntilIdle()
+        assertEquals(0, viewModel.state.value.preferences.customIntroSeconds)
+        assertEquals(1800, viewModel.state.value.preferences.customOutroSeconds)
+    }
+
+    @Test
+    fun screenRestoresSavedTunneledPlaybackPreference() = runTest(dispatcher) {
         repository.updatePlayerPreferences { it.copy(enableTunneledPlayback = true) }
-        val viewModel = PlayerPreferencesViewModel(
-            preferencesRepository = repository,
-            PlayerPreferencesViewModel.Output(navigateUp = {}),
-        )
+        val viewModel = PlayerPreferencesViewModel(repository, PlayerPreferencesViewModel.Output(navigateUp = {}))
 
         assertTrue(viewModel.state.value.preferences.enableTunneledPlayback)
     }

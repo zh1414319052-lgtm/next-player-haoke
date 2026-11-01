@@ -10,21 +10,12 @@ class NavBackStackTest {
 
     @Test
     fun removeLastIfNotRoot_removesTopEntryFromNestedStack() {
-        val backStack = NavBackStack<NavKey>(
-            Root,
-            Detail,
-        )
+        val backStack = NavBackStack<NavKey>(Root, Detail)
 
         val removed = backStack.removeLastIfNotRoot()
 
-        assertEquals(
-            Detail,
-            removed,
-        )
-        assertEquals(
-            listOf(element = Root),
-            backStack,
-        )
+        assertEquals(Detail, removed)
+        assertEquals(listOf(Root), backStack)
     }
 
     @Test
@@ -34,22 +25,16 @@ class NavBackStackTest {
         val removed = backStack.removeLastIfNotRoot()
 
         assertNull(removed)
-        assertEquals(
-            listOf(element = Root),
-            backStack,
-        )
+        assertEquals(listOf(Root), backStack)
     }
 
     @Test
     fun ensureRoot_restoresRootToEmptyStack() {
         val backStack = NavBackStack<NavKey>()
 
-        backStack.ensureRoot(root = Root)
+        backStack.ensureRoot(Root)
 
-        assertEquals(
-            listOf(element = Root),
-            backStack,
-        )
+        assertEquals(listOf(Root), backStack)
     }
 
     private data object Root : NavKey

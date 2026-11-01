@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
@@ -36,10 +35,12 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableIntState
@@ -61,15 +62,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -103,30 +103,10 @@ enum class TopLevelDestination(
     @StringRes val labelRes: Int,
     val fabKey: String? = null,
 ) {
-    MEDIA(
-        MediaPickerRoute(),
-        NextIcons.Home,
-        R.string.home,
-        TopLevelFabKey.MEDIA,
-    ),
-    PLAYLISTS(
-        PlaylistListRoute,
-        NextIcons.Playlist,
-        R.string.playlists,
-        TopLevelFabKey.PLAYLISTS,
-    ),
-    NETWORK(
-        NetworkRoute,
-        NextIcons.Network,
-        R.string.network,
-        TopLevelFabKey.NETWORK,
-    ),
-    MORE(
-        MoreRoute,
-        NextIcons.More,
-        R.string.more,
-        TopLevelFabKey.MORE,
-    ),
+    MEDIA(MediaPickerRoute(), NextIcons.Home, R.string.home, TopLevelFabKey.MEDIA),
+    PLAYLISTS(PlaylistListRoute, NextIcons.Playlist, R.string.playlists, TopLevelFabKey.PLAYLISTS),
+    NETWORK(NetworkRoute, NextIcons.Network, R.string.network, TopLevelFabKey.NETWORK),
+    MORE(MoreRoute, NextIcons.More, R.string.more, TopLevelFabKey.MORE),
 }
 
 @Composable
@@ -139,16 +119,9 @@ fun rememberTopLevelNavState(): TopLevelNavState {
         backStack.ensureRoot(dest.route)
         dest.route to backStack
     }
-    val selectedIndex = rememberSaveable { mutableIntStateOf(value = 0) }
-    return remember(
-        backStacks,
-        selectedIndex,
-    ) {
-        TopLevelNavState(
-            destinations = destinations,
-            backStacks = backStacks,
-            selectedIndexState = selectedIndex,
-        )
+    val selectedIndex = rememberSaveable { mutableIntStateOf(0) }
+    return remember(backStacks, selectedIndex) {
+        TopLevelNavState(destinations, backStacks, selectedIndex)
     }
 }
 
@@ -173,17 +146,10 @@ class TopLevelNavState(
     val topLevelRoute: NavKey get() = destinations[selectedIndex].route
 
     /** The back stack of the currently selected tab — navigation targets are added here. */
-    val currentStack: NavBackStack<NavKey> get() = backStacks.getValue(key = topLevelRoute)
+    val currentStack: NavBackStack<NavKey> get() = backStacks.getValue(topLevelRoute)
 
     private val stacksInUse: List<NavKey>
-        get() = if (selectedIndex == 0) {
-            listOf(element = startRoute)
-        } else {
-            listOf(
-                startRoute,
-                topLevelRoute,
-            )
-        }
+        get() = if (selectedIndex == 0) listOf(startRoute) else listOf(startRoute, topLevelRoute)
 
     /**
      * The [androidx.navigation3.runtime.NavEntry.contentKey]s of the top-level destinations. Used to
@@ -194,10 +160,7 @@ class TopLevelNavState(
         listOf(
             dest.route,
             dest.route.toString(),
-            Pair(
-                first = "${dest.route}",
-                second = "${dest.route::class}",
-            ),
+            Pair("${dest.route}", "${dest.route::class}"),
         )
     }.toSet()
 
@@ -231,60 +194,32 @@ class TopLevelNavState(
                 entryProvider = entryProvider,
             )
         }
-        return stacksInUse.flatMap { decoratedByRoute.getValue(key = it) }.toMutableStateList()
+        return stacksInUse.flatMap { decoratedByRoute.getValue(it) }.toMutableStateList()
     }
 }
 
-fun TopLevelNavState.isNavigationBetweenTopLevelDestinations(
-    initialState: Scene<NavKey>,
-    targetState: Scene<NavKey>,
-): Boolean = topLevelContentKeys.run {
-    contains(initialState.entries.lastOrNull()?.contentKey) &&
-        contains(targetState.entries.lastOrNull()?.contentKey)
-}
+fun TopLevelNavState.isNavigationBetweenTopLevelDestinations(initialState: Scene<NavKey>, targetState: Scene<NavKey>): Boolean =
+    topLevelContentKeys.run { contains(initialState.entries.lastOrNull()?.contentKey) && contains(targetState.entries.lastOrNull()?.contentKey) }
 
-internal fun TopLevelNavState.navigationTransition(
-    initialState: Scene<NavKey>,
-    targetState: Scene<NavKey>,
-): ContentTransform {
-    if (isNavigationBetweenTopLevelDestinations(
-            initialState = initialState,
-            targetState = targetState,
-        )
-    ) {
-        return fadeIn(
-            animationSpec = tween(
-                durationMillis = 200,
-                easing = LinearEasing,
-            ),
-        ) togetherWith
-            fadeOut(
-                animationSpec = tween(
-                    durationMillis = 200,
-                    easing = LinearEasing,
-                ),
-            )
+internal fun TopLevelNavState.navigationTransition(initialState: Scene<NavKey>, targetState: Scene<NavKey>): ContentTransform {
+    if (isNavigationBetweenTopLevelDestinations(initialState, targetState)) {
+        return fadeIn(tween(200, easing = LinearEasing)) togetherWith fadeOut(tween(200, easing = LinearEasing))
     }
 
     // Quick Back can select the pop spec while the animated scenes still describe the push.
     // Keep the direction tied to those scenes so the existing slide can reverse smoothly.
-    val isPop = initialState.previousEntries.any {
-        it.contentKey == targetState.entries.lastOrNull()?.contentKey
-    }
+    val isPop = initialState.previousEntries.any { it.contentKey == targetState.entries.lastOrNull()?.contentKey }
     return slideInHorizontally(
         initialOffsetX = { if (isPop) -(it * 0.3f).toInt() else it },
-        animationSpec = tween(
-            durationMillis = 200,
-            easing = LinearEasing,
-        ),
+        animationSpec = tween(durationMillis = 200, easing = LinearEasing),
     ) togetherWith slideOutHorizontally(
         targetOffsetX = { if (isPop) it else -(it * 0.3f).toInt() },
-        animationSpec = tween(
-            durationMillis = 200,
-            easing = LinearEasing,
-        ),
+        animationSpec = tween(durationMillis = 200, easing = LinearEasing),
     )
 }
+
+private val NavigationHorizontalPadding = 8.dp
+private val TopLevelControlSize = 56.dp
 
 @Composable
 fun NextNavigationBar(
@@ -310,79 +245,86 @@ fun NextNavigationBar(
             }
             .navigationBarsPadding()
             .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
-            .padding(bottom = 12.dp)
-            .padding(horizontal = 16.dp)
-            .thenIf(condition = !showFabOnly) { pointerInput(key1 = Unit) {} },
+            .padding(bottom = 4.dp)
+            .thenIf(condition = !showFabOnly) {
+                pointerInput(Unit) {}
+            },
         contentAlignment = Alignment.BottomCenter,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            fabState?.let { fab ->
+                val fabButton: @Composable () -> Unit = {
+                    FloatingActionButton(
+                        onClick = fab.onClick,
+                        modifier = Modifier
+                            .size(TopLevelControlSize)
+                            .testTag("top_level_fab")
+                            .focusRequester(fabFocusRequester)
+                            .tvFocusRing(shape = MaterialTheme.shapes.large)
+                            .focusProperties {
+                                if (isTv) {
+                                    up = fab.upFocusRequester.takeUnless { it == FocusRequester.Default }
+                                        ?: contentFocusRequester
+                                }
+                            },
+                        shape = MaterialTheme.shapes.large,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ) {
+                        AnimatedContent(
+                            targetState = fab,
+                            transitionSpec = {
+                                fadeIn(tween(250, easing = FastOutSlowInEasing)) +
+                                    scaleIn(tween(250, easing = FastOutSlowInEasing), initialScale = 0.25f) togetherWith
+                                    fadeOut(tween(250, easing = FastOutSlowInEasing)) +
+                                    scaleOut(tween(250, easing = FastOutSlowInEasing), targetScale = 0.25f)
+                            },
+                            label = "fab_icon_swap",
+                        ) { fab ->
+                            Icon(
+                                imageVector = fab.icon,
+                                contentDescription = null,
+                            )
+                        }
+                    }
+                }
+                if (showFabOnly) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 16.dp, bottom = 12.dp),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        fabButton()
+                    }
+                } else {
+                    // Use the same columns as the bottom bar instead of estimating the FAB width.
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = NavigationHorizontalPadding)
+                            .padding(bottom = 12.dp),
+                    ) {
+                        state.destinations.forEachIndexed { index, _ ->
+                            Box(
+                                modifier = Modifier.weight(1f),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (index == state.destinations.lastIndex) fabButton()
+                            }
+                        }
+                    }
+                }
+            }
+
             if (!showFabOnly) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 NavigationView(
+                    modifier = Modifier.padding(horizontal = NavigationHorizontalPadding),
                     destinations = state.destinations,
                     isSelected = { it.route == state.topLevelRoute },
                     onDestinationClick = { state.switchTo(it.route) },
                 )
-            } else {
-                Spacer(Modifier.weight(weight = 1f))
-            }
-
-            fabState?.let { fab ->
-                FloatingActionButton(
-                    onClick = fab.onClick,
-                    modifier = Modifier
-                        .testTag(tag = "top_level_fab")
-                        .focusRequester(focusRequester = fabFocusRequester)
-                        .tvFocusRing(shape = MaterialTheme.shapes.large)
-                        .focusProperties {
-                            if (isTv) {
-                                up =
-                                    fab.upFocusRequester.takeUnless { it == FocusRequester.Default }
-                                        ?: contentFocusRequester
-                            }
-                        },
-                    shape = MaterialTheme.shapes.large,
-                ) {
-                    AnimatedContent(
-                        targetState = fab,
-                        transitionSpec = {
-                            fadeIn(
-                                animationSpec = tween(
-                                    durationMillis = 250,
-                                    easing = FastOutSlowInEasing,
-                                ),
-                            ) +
-                                scaleIn(
-                                    animationSpec = tween(
-                                        durationMillis = 250,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                    initialScale = 0.25f,
-                                ) togetherWith
-                                fadeOut(
-                                    animationSpec = tween(
-                                        durationMillis = 250,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                ) +
-                                scaleOut(
-                                    animationSpec = tween(
-                                        durationMillis = 250,
-                                        easing = FastOutSlowInEasing,
-                                    ),
-                                    targetScale = 0.25f,
-                                )
-                        },
-                        label = "fab_icon_swap",
-                    ) { fab ->
-                        Icon(
-                            imageVector = fab.icon,
-                            contentDescription = null,
-                        )
-                    }
-                }
             }
         }
     }
@@ -396,44 +338,41 @@ fun NavigationView(
     onDestinationClick: (TopLevelDestination) -> Unit,
 ) {
     val animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Rect>()
-    val boundsTransform = remember { BoundsTransform { _, _ -> animationSpec } }
+    val boundsTransform = remember {
+        BoundsTransform { _, _ -> animationSpec }
+    }
 
-    Box(
-        modifier = modifier
-            .graphicsLayer(
-                shadowElevation = with(LocalDensity.current) { 6.dp.toPx() },
-                shape = CircleShape,
-            )
-            .clip(shape = CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .padding(4.dp),
-    ) {
+    Box(modifier = modifier.fillMaxWidth()) {
         LookaheadScope {
             val pill = remember {
                 movableContentOf<BoxScope> { scope ->
-                    with(receiver = scope) {
+                    with(scope) {
                         Box(
                             modifier = Modifier
-                                .matchParentSize()
+                                .align(Alignment.Center)
+                                .size(TopLevelControlSize)
                                 .animateBounds(
                                     lookaheadScope = this@LookaheadScope,
                                     boundsTransform = boundsTransform,
                                 )
-                                .clip(shape = CircleShape)
-                                .background(MaterialTheme.colorScheme.secondaryContainer),
+                                .clip(MaterialTheme.shapes.large)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                .testTag("top_level_selected_background"),
                         )
                     }
                 }
             }
 
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 destinations.forEach { destination ->
                     val isSelected = isSelected(destination)
                     Box(
-                        modifier = Modifier.zIndex(zIndex = if (isSelected) 0f else 1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .zIndex(if (isSelected) 0f else 1f),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (isSelected) {
@@ -441,8 +380,8 @@ fun NavigationView(
                         }
                         Column(
                             Modifier
-                                .tvFocusRing(shape = RoundedCornerShape(99.dp))
-                                .clip(shape = CircleShape)
+                                .tvFocusRing(shape = RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(16.dp))
                                 .selectable(
                                     selected = isSelected,
                                     onClick = { onDestinationClick(destination) },
@@ -450,16 +389,13 @@ fun NavigationView(
                                     indication = null,
                                     interactionSource = null,
                                 )
-                                .padding(
-                                    horizontal = 16.dp,
-                                    vertical = 12.dp,
-                                ),
+                                .padding(horizontal = 8.dp, vertical = 10.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
                         ) {
                             CompositionLocalProvider(
-                                value = LocalContentColor provides if (isSelected) {
-                                    MaterialTheme.colorScheme.onSecondaryContainer
+                                LocalContentColor provides if (isSelected) {
+                                    MaterialTheme.colorScheme.primary
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 },
@@ -468,6 +404,11 @@ fun NavigationView(
                                     imageVector = destination.icon,
                                     contentDescription = stringResource(destination.labelRes),
                                     modifier = Modifier.size(24.dp),
+                                )
+                                Text(
+                                    text = stringResource(destination.labelRes),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                                 )
                             }
                         }
@@ -487,24 +428,21 @@ fun NextNavigationRail(state: TopLevelNavState, modifier: Modifier = Modifier) {
         Column(
             modifier = Modifier.fillMaxHeight(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(
-                8.dp,
-                Alignment.CenterVertically,
-            ),
+            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
         ) {
             state.destinations.forEach { dest ->
                 val selected = state.topLevelRoute == dest.route
                 Box(
                     Modifier
                         .tvFocusRing(shape = RoundedCornerShape(99.dp))
-                        .clip(shape = CircleShape)
+                        .clip(CircleShape)
                         .selectable(
                             selected = state.topLevelRoute == dest.route,
                             onClick = { state.switchTo(dest.route) },
                             role = Role.Tab,
                         )
                         .background(
-                            color = if (selected) {
+                            if (selected) {
                                 MaterialTheme.colorScheme.secondaryContainer
                             } else {
                                 Color.Transparent
@@ -515,7 +453,7 @@ fun NextNavigationRail(state: TopLevelNavState, modifier: Modifier = Modifier) {
                     propagateMinConstraints = true,
                 ) {
                     CompositionLocalProvider(
-                        value = LocalContentColor provides if (selected) {
+                        LocalContentColor provides if (selected) {
                             MaterialTheme.colorScheme.onSecondaryContainer
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant

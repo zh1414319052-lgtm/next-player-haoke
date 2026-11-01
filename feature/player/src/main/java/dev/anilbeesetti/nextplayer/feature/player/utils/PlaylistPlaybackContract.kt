@@ -1,6 +1,5 @@
 package dev.anilbeesetti.nextplayer.feature.player.utils
 
-import android.os.Bundle
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -11,26 +10,14 @@ object PlaylistPlaybackContract {
         "dev.anilbeesetti.nextplayer.extra.PLAYLIST_ID"
 }
 
-private const val EXPLICIT_PLAYLIST_KEY = "dev.anilbeesetti.nextplayer.extra.EXPLICIT_PLAYLIST"
+internal data class PlaylistMediaQueue(
+    val mediaItems: List<MediaItem>,
+    val startIndex: Int,
+)
 
-internal val MediaItem.isExplicitPlaylistItem: Boolean
-    get() = requestMetadata.extras?.getBoolean(EXPLICIT_PLAYLIST_KEY) == true
-
-internal fun MediaItem.asExplicitPlaylistItem(): MediaItem = buildUpon()
-    .setRequestMetadata(
-        requestMetadata.buildUpon().setExtras(
-            (requestMetadata.extras?.let(block = ::Bundle) ?: Bundle()).apply {
-                putBoolean(
-                    EXPLICIT_PLAYLIST_KEY,
-                    true,
-                )
-            },
-        ).build(),
-    ).build()
-
-internal data class PlaylistMediaQueue(val mediaItems: List<MediaItem>, val startIndex: Int)
-
-internal fun PlaylistRecord.toMediaQueue(selectedUri: String): PlaylistMediaQueue? {
+internal fun PlaylistRecord.toMediaQueue(
+    selectedUri: String,
+): PlaylistMediaQueue? {
     val startIndex = items.indexOfFirst { it.uri == selectedUri }
         .takeIf { it >= 0 }
         ?: return null
@@ -45,13 +32,12 @@ internal fun PlaylistRecord.toMediaQueue(selectedUri: String): PlaylistMediaQueu
                         .setTitle(item.title)
                         .setArtworkUri(
                             item.tvgLogo
-                                ?.takeIf(predicate = String::isNotBlank)
+                                ?.takeIf(String::isNotBlank)
                                 ?.toUri(),
                         )
                         .build(),
                 )
                 .build()
-                .asExplicitPlaylistItem()
         },
         startIndex = startIndex,
     )

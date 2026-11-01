@@ -38,6 +38,9 @@ kotlin {
 
 dependencies {
 
+    implementation(project(":core:analysis"))
+    implementation(project(":core:database"))
+    implementation(project(":core:cast"))
     implementation(project(":core:common"))
     implementation(project(":core:ui"))
     implementation(project(":core:data"))
@@ -66,6 +69,7 @@ dependencies {
 
     // Media3
     implementation(libs.androidx.media3.common)
+    implementation(libs.androidx.media3.effect)
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.exoplayer.dash)
     implementation(libs.androidx.media3.exoplayer.hls)

@@ -38,77 +38,42 @@ class PlaylistDetailScreenTest {
     @Test
     fun tvFabUpReturnsToTheVideoInsteadOfSearch() {
         assumeTrue(ApplicationProvider.getApplicationContext<Context>().isTelevision)
-        setContent(
-            playlist = playlist(
-                item(
-                    uri = "content://one",
-                    name = "One.mp4",
-                    parentPath = "/Movies",
-                    position = 0,
-                ),
-            ),
-            isTv = true,
-        )
-        composeRule.onNodeWithContentDescription(label = "Play").requestFocus()
+        setContent(playlist(item("content://one", "One.mp4", "/Movies", 0)), isTv = true)
+        composeRule.onNodeWithContentDescription("Play").requestFocus()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
-        composeRule.onNodeWithText(text = "One").assertIsFocused()
+        composeRule.onNodeWithText("One").assertIsFocused()
     }
 
     @Test
     fun tvFabUpRestoresThePreviouslyFocusedVideo() {
         assumeTrue(ApplicationProvider.getApplicationContext<Context>().isTelevision)
         setContent(
-            playlist = playlist(
-                item(
-                    uri = "content://one",
-                    name = "One.mp4",
-                    parentPath = "/Movies",
-                    position = 0,
-                ),
-                item(
-                    uri = "content://two",
-                    name = "Two.mp4",
-                    parentPath = "/Movies",
-                    position = 1,
-                ),
+            playlist(
+                item("content://one", "One.mp4", "/Movies", 0),
+                item("content://two", "Two.mp4", "/Movies", 1),
             ),
             isTv = true,
         )
-        composeRule.onNodeWithText(text = "Two").requestFocus()
-        composeRule.onNodeWithContentDescription(label = "Play").requestFocus()
+        composeRule.onNodeWithText("Two").requestFocus()
+        composeRule.onNodeWithContentDescription("Play").requestFocus()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
-        composeRule.onNodeWithText(text = "Two").assertIsFocused()
+        composeRule.onNodeWithText("Two").assertIsFocused()
     }
 
     @Test
     fun playFabEmitsOrderedQueueStartingFromFirstVideo() {
         val actions = mutableListOf<PlaylistDetailUiAction>()
         val playlist = playlist(
-            item(
-                uri = "content://two",
-                name = "Renamed Two.mp4",
-                parentPath = "/Moved",
-                position = 0,
-            ),
-            item(
-                uri = "content://one",
-                name = "One.mp4",
-                parentPath = "/Movies",
-                position = 1,
-            ),
+            item("content://two", "Renamed Two.mp4", "/Moved", 0),
+            item("content://one", "One.mp4", "/Movies", 1),
         )
 
-        setContent(
-            playlist = playlist,
-            onAction = actions::add,
-        )
+        setContent(playlist, onAction = actions::add)
 
-        composeRule.onNodeWithText(text = "Renamed Two").assertIsDisplayed()
-        composeRule.onNodeWithText(text = "/Moved").assertIsDisplayed()
-        composeRule.onAllNodesWithContentDescription(
-            label = "Play all",
-        ).assertCountEquals(expectedSize = 0)
-        composeRule.onNodeWithContentDescription(label = "Play").performClick()
+        composeRule.onNodeWithText("Renamed Two").assertIsDisplayed()
+        composeRule.onNodeWithText("/Moved").assertIsDisplayed()
+        composeRule.onAllNodesWithContentDescription("Play all").assertCountEquals(0)
+        composeRule.onNodeWithContentDescription("Play").performClick()
 
         assertEquals(
             PlaylistDetailUiAction.OnPlay(Uri.parse("content://two")),
@@ -120,26 +85,12 @@ class PlaylistDetailScreenTest {
     fun playFabStartsFromTheLastPlayedVideo() {
         val actions = mutableListOf<PlaylistDetailUiAction>()
         val playlist = playlist(
-            item(
-                uri = "content://one",
-                name = "One.mp4",
-                parentPath = "/Movies",
-                position = 0,
-            ),
-            item(
-                uri = "content://two",
-                name = "Two.mp4",
-                parentPath = "/Movies",
-                position = 1,
-                lastPlayedAt = 200,
-            ),
+            item("content://one", "One.mp4", "/Movies", 0),
+            item("content://two", "Two.mp4", "/Movies", 1, lastPlayedAt = 200),
         )
 
-        setContent(
-            playlist = playlist,
-            onAction = actions::add,
-        )
-        composeRule.onNodeWithContentDescription(label = "Play").performClick()
+        setContent(playlist, onAction = actions::add)
+        composeRule.onNodeWithContentDescription("Play").performClick()
 
         assertEquals(
             PlaylistDetailUiAction.OnPlay(Uri.parse("content://two")),
@@ -150,40 +101,28 @@ class PlaylistDetailScreenTest {
     @Test
     fun existingPlaylistRemainsVisibleWhileUpdating() {
         setContent(
-            playlist = playlist(
-                item(
-                    uri = "content://one",
-                    name = "One.mp4",
-                    parentPath = "/Movies",
-                    position = 0,
-                ),
-            ),
+            playlist = playlist(item("content://one", "One.mp4", "/Movies", 0)),
             updateActionState = ActionState.Running,
         )
 
-        composeRule.onNodeWithText(text = "One").assertIsDisplayed()
-        composeRule.onNodeWithText(text = "/Movies").assertIsDisplayed()
+        composeRule.onNodeWithText("One").assertIsDisplayed()
+        composeRule.onNodeWithText("/Movies").assertIsDisplayed()
     }
 
     @Test
     fun removeMenuRequestsConfirmation() {
         val actions = mutableListOf<PlaylistDetailUiAction>()
-        val item = item(
-            uri = "content://one",
-            name = "One.mp4",
-            parentPath = "/Movies",
-            position = 0,
-        )
+        val item = item("content://one", "One.mp4", "/Movies", 0)
         setContent(
             playlist = playlist(item),
             onAction = actions::add,
         )
 
-        composeRule.onNodeWithContentDescription(label = "Playlist actions").performClick()
-        composeRule.onNodeWithText(text = "Remove").performClick()
+        composeRule.onNodeWithContentDescription("Playlist actions").performClick()
+        composeRule.onNodeWithText("Remove").performClick()
 
         assertEquals(
-            listOf(PlaylistDetailUiAction.ShowRemoveDialogFor(item = item)),
+            listOf(PlaylistDetailUiAction.ShowRemoveDialogFor(item)),
             actions,
         )
     }
@@ -191,23 +130,18 @@ class PlaylistDetailScreenTest {
     @Test
     fun removeDialogEmitsRemoveActionAfterConfirmation() {
         val actions = mutableListOf<PlaylistDetailUiAction>()
-        val item = item(
-            uri = "content://one",
-            name = "One.mp4",
-            parentPath = "/Movies",
-            position = 0,
-        )
+        val item = item("content://one", "One.mp4", "/Movies", 0)
         setContent(
             playlist = playlist(item),
             showRemoveDialogFor = item,
             onAction = actions::add,
         )
 
-        composeRule.onNodeWithText(text = "Remove “One” from this playlist?").assertIsDisplayed()
-        composeRule.onNodeWithText(text = "Remove").performClick()
+        composeRule.onNodeWithText("Remove “One” from this playlist?").assertIsDisplayed()
+        composeRule.onNodeWithText("Remove").performClick()
 
         assertEquals(
-            listOf(PlaylistDetailUiAction.RemoveVideo(videoUri = "content://one")),
+            listOf(PlaylistDetailUiAction.RemoveVideo("content://one")),
             actions,
         )
     }
@@ -216,18 +150,8 @@ class PlaylistDetailScreenTest {
     fun inPlaceSearchFiltersMetadataAndEmitsPlaybackAction() {
         val actions = mutableListOf<PlaylistDetailUiAction>()
         val playlist = playlist(
-            item(
-                uri = "content://one",
-                name = "One.mp4",
-                parentPath = "/Movies",
-                position = 0,
-            ),
-            item(
-                uri = "content://two",
-                name = "Two.mp4",
-                parentPath = "/Downloads",
-                position = 1,
-            ),
+            item("content://one", "One.mp4", "/Movies", 0),
+            item("content://two", "Two.mp4", "/Downloads", 1),
         )
         setContent(
             playlist = playlist,
@@ -236,12 +160,10 @@ class PlaylistDetailScreenTest {
             onAction = actions::add,
         )
 
-        composeRule.onAllNodesWithContentDescription(
-            label = "Play",
-        ).assertCountEquals(expectedSize = 0)
-        composeRule.onAllNodesWithText(text = "One").assertCountEquals(expectedSize = 0)
-        composeRule.onNodeWithText(text = "Two").assertIsDisplayed()
-        composeRule.onNodeWithText(text = "Two").performClick()
+        composeRule.onAllNodesWithContentDescription("Play").assertCountEquals(0)
+        composeRule.onAllNodesWithText("One").assertCountEquals(0)
+        composeRule.onNodeWithText("Two").assertIsDisplayed()
+        composeRule.onNodeWithText("Two").performClick()
 
         assertEquals(
             PlaylistDetailUiAction.OnPlay(Uri.parse("content://two")),
@@ -253,22 +175,15 @@ class PlaylistDetailScreenTest {
     fun closeSearchEmitsCloseAction() {
         val actions = mutableListOf<PlaylistDetailUiAction>()
         setContent(
-            playlist = playlist(
-                item(
-                    uri = "content://one",
-                    name = "One.mp4",
-                    parentPath = "/Movies",
-                    position = 0,
-                ),
-            ),
+            playlist = playlist(item("content://one", "One.mp4", "/Movies", 0)),
             isSearching = true,
             onAction = actions::add,
         )
 
-        composeRule.onNodeWithContentDescription(label = "Close search").performClick()
+        composeRule.onNodeWithContentDescription("Close search").performClick()
 
         assertEquals(
-            listOf(element = PlaylistDetailUiAction.OnCloseSearchClick),
+            listOf(PlaylistDetailUiAction.OnCloseSearchClick),
             actions,
         )
     }
@@ -277,18 +192,8 @@ class PlaylistDetailScreenTest {
     fun touchReorderModeUsesWholeRowsWithoutPlayingVideos() {
         val actions = mutableListOf<PlaylistDetailUiAction>()
         val playlist = playlist(
-            item(
-                uri = "content://one",
-                name = "One.mp4",
-                parentPath = "/Movies",
-                position = 0,
-            ),
-            item(
-                uri = "content://two",
-                name = "Two.mp4",
-                parentPath = "/Movies",
-                position = 1,
-            ),
+            item("content://one", "One.mp4", "/Movies", 0),
+            item("content://two", "Two.mp4", "/Movies", 1),
         )
 
         setContent(
@@ -298,25 +203,16 @@ class PlaylistDetailScreenTest {
             onAction = actions::add,
         )
 
-        composeRule.onAllNodesWithContentDescription(
-            label = "Play",
-        ).assertCountEquals(expectedSize = 0)
-        composeRule.onNodeWithContentDescription(label = "Finish reordering").assertIsDisplayed()
-        composeRule.onAllNodesWithContentDescription(
-            label = "Reorder playlist item",
-        ).assertCountEquals(expectedSize = 2)
-        composeRule.onAllNodesWithContentDescription(
-            label = "Playlist actions",
-        ).assertCountEquals(expectedSize = 0)
-        composeRule.onNodeWithText(text = "One").performClick()
-        assertEquals(
-            emptyList<PlaylistDetailUiAction>(),
-            actions,
-        )
+        composeRule.onAllNodesWithContentDescription("Play").assertCountEquals(0)
+        composeRule.onNodeWithContentDescription("Finish reordering").assertIsDisplayed()
+        composeRule.onAllNodesWithContentDescription("Reorder playlist item").assertCountEquals(2)
+        composeRule.onAllNodesWithContentDescription("Playlist actions").assertCountEquals(0)
+        composeRule.onNodeWithText("One").performClick()
+        assertEquals(emptyList<PlaylistDetailUiAction>(), actions)
 
-        composeRule.onNodeWithContentDescription(label = "Finish reordering").performClick()
+        composeRule.onNodeWithContentDescription("Finish reordering").performClick()
         assertEquals(
-            listOf(element = PlaylistDetailUiAction.OnFinishReorderingClick),
+            listOf(PlaylistDetailUiAction.OnFinishReorderingClick),
             actions,
         )
     }
@@ -326,26 +222,16 @@ class PlaylistDetailScreenTest {
         val actions = mutableListOf<PlaylistDetailUiAction>()
         setContent(
             playlist = playlist(
-                item(
-                    uri = "content://one",
-                    name = "One.mp4",
-                    parentPath = "/Movies",
-                    position = 0,
-                ),
-                item(
-                    uri = "content://two",
-                    name = "Two.mp4",
-                    parentPath = "/Movies",
-                    position = 1,
-                ),
+                item("content://one", "One.mp4", "/Movies", 0),
+                item("content://two", "Two.mp4", "/Movies", 1),
             ),
             onAction = actions::add,
         )
 
-        composeRule.onNodeWithContentDescription(label = "Reorder playlist").performClick()
+        composeRule.onNodeWithContentDescription("Reorder playlist").performClick()
 
         assertEquals(
-            listOf(element = PlaylistDetailUiAction.OnReorderClick),
+            listOf(PlaylistDetailUiAction.OnReorderClick),
             actions,
         )
     }
@@ -354,18 +240,8 @@ class PlaylistDetailScreenTest {
     fun tvRowsPlayWithoutReorderControls() {
         val actions = mutableListOf<PlaylistDetailUiAction>()
         val playlist = playlist(
-            item(
-                uri = "content://one",
-                name = "One.mp4",
-                parentPath = "/Movies",
-                position = 0,
-            ),
-            item(
-                uri = "content://two",
-                name = "Two.mp4",
-                parentPath = "/Movies",
-                position = 1,
-            ),
+            item("content://one", "One.mp4", "/Movies", 0),
+            item("content://two", "Two.mp4", "/Movies", 1),
         )
         setContent(
             playlist = playlist,
@@ -373,20 +249,12 @@ class PlaylistDetailScreenTest {
             onAction = actions::add,
         )
 
-        composeRule.onAllNodesWithContentDescription(
-            label = "Reorder playlist",
-        ).assertCountEquals(expectedSize = 0)
-        composeRule.onAllNodesWithContentDescription(
-            label = "Play",
-        ).assertCountEquals(expectedSize = 1)
-        composeRule.onAllNodesWithContentDescription(
-            label = "Move up",
-        ).assertCountEquals(expectedSize = 0)
-        composeRule.onAllNodesWithContentDescription(
-            label = "Move down",
-        ).assertCountEquals(expectedSize = 0)
+        composeRule.onAllNodesWithContentDescription("Reorder playlist").assertCountEquals(0)
+        composeRule.onAllNodesWithContentDescription("Play").assertCountEquals(1)
+        composeRule.onAllNodesWithContentDescription("Move up").assertCountEquals(0)
+        composeRule.onAllNodesWithContentDescription("Move down").assertCountEquals(0)
 
-        composeRule.onNodeWithText(text = "One").performClick()
+        composeRule.onNodeWithText("One").performClick()
         assertEquals(
             PlaylistDetailUiAction.OnPlay(Uri.parse("content://one")),
             actions.single(),
@@ -404,15 +272,12 @@ class PlaylistDetailScreenTest {
         onAction: (PlaylistDetailUiAction) -> Unit = {},
     ) {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        assumeTrue(
-            "Requires ${if (isTv) "TV" else "phone"} device",
-            context.isTelevision == isTv,
-        )
+        assumeTrue("Requires ${if (isTv) "TV" else "phone"} device", context.isTelevision == isTv)
         composeRule.setContent {
             NextPlayerTheme {
                 PlaylistDetailScreenContent(
                     state = PlaylistDetailUiState(
-                        playlistDataState = DataState.Success(value = playlist),
+                        playlistDataState = DataState.Success(playlist),
                         updateActionState = updateActionState,
                         isSearching = isSearching,
                         searchQuery = searchQuery,

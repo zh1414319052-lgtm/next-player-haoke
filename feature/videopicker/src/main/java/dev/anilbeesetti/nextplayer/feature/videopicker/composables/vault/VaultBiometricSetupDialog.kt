@@ -15,26 +15,23 @@ import dev.anilbeesetti.nextplayer.core.ui.components.NextDialog
 @Composable
 internal fun VaultBiometricSetupDialog(onComplete: (Boolean) -> Unit) {
     if (!rememberVaultBiometricAvailable()) {
-        LaunchedEffect(key1 = Unit) { onComplete(false) }
+        LaunchedEffect(Unit) { onComplete(false) }
         return
     }
 
-    var authenticating by rememberSaveable { mutableStateOf(value = false) }
+    var authenticating by rememberSaveable { mutableStateOf(false) }
     NextDialog(
         onDismissRequest = { onComplete(false) },
-        title = { Text(text = stringResource(R.string.vault_biometric_setup_title)) },
-        content = { Text(text = stringResource(R.string.vault_biometric_setup_description)) },
+        title = { Text(stringResource(R.string.vault_biometric_setup_title)) },
+        content = { Text(stringResource(R.string.vault_biometric_setup_description)) },
         confirmButton = {
-            TextButton(
-                onClick = { authenticating = true },
-                enabled = !authenticating,
-            ) {
-                Text(text = stringResource(R.string.enable_biometric_unlock))
+            TextButton(onClick = { authenticating = true }, enabled = !authenticating) {
+                Text(stringResource(R.string.enable_biometric_unlock))
             }
         },
         dismissButton = {
             TextButton(onClick = { onComplete(false) }) {
-                Text(text = stringResource(R.string.not_now))
+                Text(stringResource(R.string.not_now))
             }
         },
     )

@@ -1,3 +1,5 @@
+@file:androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+
 package dev.anilbeesetti.nextplayer.feature.player.extensions
 
 import androidx.annotation.OptIn
@@ -28,44 +30,26 @@ fun Player.switchTrack(trackType: @C.TrackType Int, trackIndex: Int) {
     }
 
     if (trackIndex < 0) {
-        Logger.logDebug(
-            tag = "Player",
-            message = "Disabling $trackTypeText",
-        )
+        Logger.logDebug("Player", "Disabling $trackTypeText")
         trackSelectionParameters = trackSelectionParameters
             .buildUpon()
-            .setTrackTypeDisabled(
-                trackType,
-                true,
-            )
+            .setTrackTypeDisabled(trackType, true)
             .build()
     } else {
         val tracks = currentTracks.groups.filter { it.type == trackType }
 
         if (tracks.isEmpty() || trackIndex >= tracks.size) {
-            Logger.logError(
-                tag = "Player",
-                message = "Operation failed: Invalid track index: $trackIndex",
-            )
+            Logger.logError("Player", "Operation failed: Invalid track index: $trackIndex")
             return
         }
 
-        Logger.logDebug(
-            tag = "Player",
-            message = "Setting $trackTypeText track: $trackIndex",
-        )
-        val trackSelectionOverride = TrackSelectionOverride(
-            tracks[trackIndex].mediaTrackGroup,
-            0,
-        )
+        Logger.logDebug("Player", "Setting $trackTypeText track: $trackIndex")
+        val trackSelectionOverride = TrackSelectionOverride(tracks[trackIndex].mediaTrackGroup, 0)
 
         // Override the track selection parameters to force the selection of the specified track.
         trackSelectionParameters = trackSelectionParameters
             .buildUpon()
-            .setTrackTypeDisabled(
-                trackType,
-                false,
-            )
+            .setTrackTypeDisabled(trackType, false)
             .setOverrideForType(trackSelectionOverride)
             .build()
     }
@@ -85,37 +69,29 @@ fun Player.getManuallySelectedTrackIndex(trackType: @C.TrackType Int): Int? {
 
 fun Player.addAdditionalSubtitleConfiguration(subtitle: MediaItem.SubtitleConfiguration) {
     val currentMediaItemLocal = currentMediaItem ?: return
-    val existingSubConfigurations =
-        currentMediaItemLocal.localConfiguration?.subtitleConfigurations ?: emptyList()
+    val existingSubConfigurations = currentMediaItemLocal.localConfiguration?.subtitleConfigurations ?: emptyList()
 
     if (existingSubConfigurations.any { it.id == subtitle.id }) {
         return
     }
 
-    val textTracks = currentTracks.groups.filter { it.type == C.TRACK_TYPE_TEXT && it.isSupported }
+    val textTracks = currentTracks.groups.filter {
+        it.type == C.TRACK_TYPE_TEXT && it.isSupported
+    }
     val position = currentPosition
 
     val updateMediaItem = currentMediaItemLocal
         .buildUpon()
-        .setSubtitleConfigurations(existingSubConfigurations + listOf(element = subtitle))
+        .setSubtitleConfigurations(existingSubConfigurations + listOf(subtitle))
         .build()
-        .copy(
-            positionMs = position,
-            subtitleTrackIndex = textTracks.size,
-        )
+        .copy(positionMs = position, subtitleTrackIndex = textTracks.size)
 
     val index = currentMediaItemIndex
     val exoPlayer = this as? ExoPlayer
     val shuffleOrder = exoPlayer?.shuffleOrder
     // Create a new source so Media3 loads the added subtitle; metadata carries decoder choices.
-    addMediaItem(
-        index + 1,
-        updateMediaItem,
-    )
-    seekTo(
-        index + 1,
-        position,
-    )
+    addMediaItem(index + 1, updateMediaItem)
+    seekTo(index + 1, position)
     removeMediaItem(index)
     shuffleOrder?.let { exoPlayer.setShuffleOrder(it) }
 }
@@ -123,7 +99,7 @@ fun Player.addAdditionalSubtitleConfiguration(subtitle: MediaItem.SubtitleConfig
 @OptIn(UnstableApi::class)
 fun Player.setIsScrubbingModeEnabled(enabled: Boolean) {
     when (this) {
-        is MediaController -> this.setMediaControllerIsScrubbingModeEnabled(enabled = enabled)
+        is MediaController -> this.setMediaControllerIsScrubbingModeEnabled(enabled)
         is ExoPlayer -> this.isScrubbingModeEnabled = enabled
     }
 }

@@ -1,0 +1,8 @@
+Haoke signed Android update components are adapted from the local GPL-3.0
+Progress Tracker Haoke integration and the Anx Reader v1 protocol.
+These modifications are distributed under the repository's GPL-3.0 license.
+The original Next Player authors, copyright and license remain unchanged.
+
+EdDSA-Java 0.3.0 (net.i2p.crypto:eddsa) is distributed under CC0-1.0.
+Only the public notification key is embedded; Android release keys and website
+authorization credentials are external to this source tree and to the APK.

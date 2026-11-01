@@ -19,11 +19,11 @@ object MediaLibraryPreferencesRoute : NavKey
 object FolderPreferencesRoute : NavKey
 
 fun NavBackStack<NavKey>.navigateToMediaLibraryPreferencesScreen() {
-    add(element = MediaLibraryPreferencesRoute)
+    add(MediaLibraryPreferencesRoute)
 }
 
 fun NavBackStack<NavKey>.navigateToFolderPreferencesScreen() {
-    add(element = FolderPreferencesRoute)
+    add(FolderPreferencesRoute)
 }
 
 fun EntryProviderScope<NavKey>.mediaLibraryPreferencesEntry(

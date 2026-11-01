@@ -11,12 +11,7 @@ class SftpOwnedInputStreamTest {
     @Test
     fun `reads from requested offset and advances by bytes read`() {
         val positions = mutableListOf<Long>()
-        val results = ArrayDeque(
-            elements = listOf(
-                3,
-                2,
-            ),
-        )
+        val results = ArrayDeque(listOf(3, 2))
         val stream = SftpOwnedInputStream(
             offset = 41L,
             reader = { position, _, _, _ ->
@@ -28,29 +23,9 @@ class SftpOwnedInputStreamTest {
             sshClient = Closeable {},
         )
 
-        assertEquals(
-            3,
-            stream.read(
-                ByteArray(size = 8),
-                1,
-                4,
-            ),
-        )
-        assertEquals(
-            2,
-            stream.read(
-                ByteArray(size = 8),
-                0,
-                2,
-            ),
-        )
-        assertEquals(
-            listOf(
-                41L,
-                44L,
-            ),
-            positions,
-        )
+        assertEquals(3, stream.read(ByteArray(8), 1, 4))
+        assertEquals(2, stream.read(ByteArray(8), 0, 2))
+        assertEquals(listOf(41L, 44L), positions)
     }
 
     @Test
@@ -67,21 +42,9 @@ class SftpOwnedInputStreamTest {
             sshClient = Closeable {},
         )
 
-        assertEquals(
-            -1,
-            stream.read(ByteArray(size = 4)),
-        )
-        assertEquals(
-            -1,
-            stream.read(ByteArray(size = 4)),
-        )
-        assertEquals(
-            listOf(
-                9L,
-                9L,
-            ),
-            positions,
-        )
+        assertEquals(-1, stream.read(ByteArray(4)))
+        assertEquals(-1, stream.read(ByteArray(4)))
+        assertEquals(listOf(9L, 9L), positions)
     }
 
     @Test
@@ -97,34 +60,13 @@ class SftpOwnedInputStreamTest {
             sftpClient = Closeable {},
             sshClient = Closeable {},
         )
-        val buffer = ByteArray(size = 4)
+        val buffer = ByteArray(4)
 
-        assertThrows(IndexOutOfBoundsException::class.java) {
-            stream.read(
-                buffer,
-                -1,
-                1,
-            )
-        }
-        assertThrows(IndexOutOfBoundsException::class.java) {
-            stream.read(
-                buffer,
-                0,
-                -1,
-            )
-        }
-        assertThrows(IndexOutOfBoundsException::class.java) {
-            stream.read(
-                buffer,
-                3,
-                2,
-            )
-        }
+        assertThrows(IndexOutOfBoundsException::class.java) { stream.read(buffer, -1, 1) }
+        assertThrows(IndexOutOfBoundsException::class.java) { stream.read(buffer, 0, -1) }
+        assertThrows(IndexOutOfBoundsException::class.java) { stream.read(buffer, 3, 2) }
 
-        assertEquals(
-            0,
-            readerCalls,
-        )
+        assertEquals(0, readerCalls)
     }
 
     @Test
@@ -141,18 +83,8 @@ class SftpOwnedInputStreamTest {
             sshClient = Closeable {},
         )
 
-        assertEquals(
-            0,
-            stream.read(
-                ByteArray(size = 4),
-                4,
-                0,
-            ),
-        )
-        assertEquals(
-            0,
-            readerCalls,
-        )
+        assertEquals(0, stream.read(ByteArray(4), 4, 0))
+        assertEquals(0, readerCalls)
     }
 
     @Test
@@ -174,17 +106,8 @@ class SftpOwnedInputStreamTest {
         stream.close()
         stream.close()
 
-        assertEquals(
-            1,
-            remoteFileCloses,
-        )
-        assertEquals(
-            1,
-            sftpClientCloses,
-        )
-        assertEquals(
-            1,
-            sshClientCloses,
-        )
+        assertEquals(1, remoteFileCloses)
+        assertEquals(1, sftpClientCloses)
+        assertEquals(1, sshClientCloses)
     }
 }

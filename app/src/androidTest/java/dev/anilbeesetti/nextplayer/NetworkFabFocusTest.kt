@@ -40,62 +40,57 @@ class NetworkFabFocusTest {
     @Before
     fun openNetwork() {
         assumeTrue(composeRule.activity.isTelevision)
-        composeRule.onAllNodes(
-            SemanticsMatcher.expectValue(
-                SemanticsProperties.Role,
-                Role.Tab,
-            ),
-        )[2]
+        composeRule.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))[2]
             .performClick()
-        composeRule.onNodeWithText(text = text(R.string.example_url)).assertIsFocused()
+        composeRule.onNodeWithText(text(R.string.example_url)).assertIsFocused()
     }
 
     @Test
     fun upFromFabTargetsUrlWhenStreamButtonIsDisabled() {
-        composeRule.onNodeWithText(text = text(R.string.open_network_stream)).assertIsNotEnabled()
+        composeRule.onNodeWithText(text(R.string.open_network_stream)).assertIsNotEnabled()
         upFromFab()
-        composeRule.onNodeWithText(text = text(R.string.example_url)).assertIsFocused()
+        composeRule.onNodeWithText(text(R.string.example_url)).assertIsFocused()
     }
 
     @Test
     fun upFromFabTargetsEnabledStreamButtonEvenWhenUrlWasLastFocused() {
-        editUrl(value = "https://example.invalid/video.mp4")
-        composeRule.onNodeWithText(text = text(R.string.open_network_stream)).assertIsEnabled()
+        editUrl("https://example.invalid/video.mp4")
+        composeRule.onNodeWithText(text(R.string.open_network_stream)).assertIsEnabled()
         upFromFab()
-        composeRule.onNodeWithText(text = text(R.string.open_network_stream)).assertIsFocused()
+        composeRule.onNodeWithText(text(R.string.open_network_stream)).assertIsFocused()
     }
 
     @Test
     fun clearingUrlRetargetsFabUpToTheTextField() {
-        editUrl(value = "https://example.invalid/video.mp4")
+        editUrl("https://example.invalid/video.mp4")
         upFromFab()
-        composeRule.onNodeWithText(text = text(R.string.open_network_stream)).assertIsFocused()
-        composeRule.onNodeWithText(text = "https://example.invalid/video.mp4").requestFocus()
-        editUrl(value = " ")
-        composeRule.onNodeWithText(text = text(R.string.open_network_stream)).assertIsNotEnabled()
+        composeRule.onNodeWithText(text(R.string.open_network_stream)).assertIsFocused()
+        composeRule.onNodeWithText("https://example.invalid/video.mp4").requestFocus()
+        editUrl(" ")
+        composeRule.onNodeWithText(text(R.string.open_network_stream)).assertIsNotEnabled()
         upFromFab()
-        composeRule.onNodeWithText(text = " ").assertIsFocused()
+        composeRule.onNodeWithText(" ").assertIsFocused()
     }
 
     @Test
     fun returningFromAddConnectionRestoresFabUpTarget() {
-        editUrl(value = "https://example.invalid/video.mp4")
-        composeRule.onNodeWithTag(testTag = "top_level_fab").performClick()
-        composeRule.onNodeWithText(text = text(R.string.add_connection)).assertExists()
+        editUrl("https://example.invalid/video.mp4")
+        composeRule.onNodeWithTag("top_level_fab").performClick()
+        composeRule.onNodeWithText(text(R.string.add_connection)).assertExists()
         pressBack()
         upFromFab()
-        composeRule.onNodeWithText(text = text(R.string.open_network_stream)).assertIsFocused()
+        composeRule.onNodeWithText(text(R.string.open_network_stream)).assertIsFocused()
     }
 
     private fun editUrl(value: String) {
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
-        composeRule.onNode(matcher = isFocused()).performTextReplacement(text = value)
+        composeRule.onNode(isFocused()).performTextReplacement(value)
         pressBack()
         composeRule.waitForIdle()
     }
 
     private fun upFromFab() {
-        composeRule.onNodeWithTag(testTag = "top_level_fab").requestFocus()
+        composeRule.onNodeWithTag("top_level_fab").requestFocus()
         composeRule.onRoot().performKeyInput { pressKey(Key.DirectionUp) }
         composeRule.waitForIdle()
     }

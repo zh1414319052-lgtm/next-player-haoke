@@ -9,44 +9,10 @@ import org.junit.Test
 class ConnectionFormValidationTest {
     @Test
     fun `legacy protocols require only name and host`() {
-        listOf(
-            NetworkProtocol.SMB,
-            NetworkProtocol.FTP,
-            NetworkProtocol.WEBDAV,
-        ).forEach { protocol ->
-            assertFalse(
-                canSaveConnection(
-                    name = "",
-                    host = "host",
-                    protocol = protocol,
-                    username = "",
-                    NetworkAuthentication.PASSWORD,
-                    hasPrivateKey = false,
-                    isTesting = false,
-                ),
-            )
-            assertFalse(
-                canSaveConnection(
-                    name = "Name",
-                    host = "",
-                    protocol = protocol,
-                    username = "",
-                    NetworkAuthentication.PASSWORD,
-                    hasPrivateKey = false,
-                    isTesting = false,
-                ),
-            )
-            assertTrue(
-                canSaveConnection(
-                    name = "Name",
-                    host = "host",
-                    protocol = protocol,
-                    username = "",
-                    NetworkAuthentication.PASSWORD,
-                    hasPrivateKey = false,
-                    isTesting = false,
-                ),
-            )
+        listOf(NetworkProtocol.SMB, NetworkProtocol.FTP, NetworkProtocol.WEBDAV).forEach { protocol ->
+            assertFalse(canSaveConnection("", "host", protocol, "", NetworkAuthentication.PASSWORD, false, false))
+            assertFalse(canSaveConnection("Name", "", protocol, "", NetworkAuthentication.PASSWORD, false, false))
+            assertTrue(canSaveConnection("Name", "host", protocol, "", NetworkAuthentication.PASSWORD, false, false))
         }
     }
 
@@ -54,24 +20,24 @@ class ConnectionFormValidationTest {
     fun `SFTP password authentication requires username`() {
         assertFalse(
             canSaveConnection(
-                name = "SFTP",
-                host = "host",
+                "SFTP",
+                "host",
                 NetworkProtocol.SFTP,
-                username = "",
+                "",
                 NetworkAuthentication.PASSWORD,
-                hasPrivateKey = false,
-                isTesting = false,
+                false,
+                false,
             ),
         )
         assertTrue(
             canSaveConnection(
-                name = "SFTP",
-                host = "host",
+                "SFTP",
+                "host",
                 NetworkProtocol.SFTP,
-                username = "alice",
+                "alice",
                 NetworkAuthentication.PASSWORD,
-                hasPrivateKey = false,
-                isTesting = false,
+                false,
+                false,
             ),
         )
     }
@@ -80,24 +46,24 @@ class ConnectionFormValidationTest {
     fun `SFTP key authentication requires username and private key`() {
         assertFalse(
             canSaveConnection(
-                name = "SFTP",
-                host = "host",
+                "SFTP",
+                "host",
                 NetworkProtocol.SFTP,
-                username = "alice",
+                "alice",
                 NetworkAuthentication.SSH_KEY,
-                hasPrivateKey = false,
-                isTesting = false,
+                false,
+                false,
             ),
         )
         assertTrue(
             canSaveConnection(
-                name = "SFTP",
-                host = "host",
+                "SFTP",
+                "host",
                 NetworkProtocol.SFTP,
-                username = "alice",
+                "alice",
                 NetworkAuthentication.SSH_KEY,
-                hasPrivateKey = true,
-                isTesting = false,
+                true,
+                false,
             ),
         )
     }
@@ -106,24 +72,24 @@ class ConnectionFormValidationTest {
     fun `testing always disables save`() {
         assertFalse(
             canSaveConnection(
-                name = "Name",
-                host = "host",
+                "Name",
+                "host",
                 NetworkProtocol.FTP,
-                username = "",
+                "",
                 NetworkAuthentication.PASSWORD,
-                hasPrivateKey = false,
-                isTesting = true,
+                false,
+                true,
             ),
         )
         assertFalse(
             canSaveConnection(
-                name = "SFTP",
-                host = "host",
+                "SFTP",
+                "host",
                 NetworkProtocol.SFTP,
-                username = "alice",
+                "alice",
                 NetworkAuthentication.SSH_KEY,
-                hasPrivateKey = true,
-                isTesting = true,
+                true,
+                true,
             ),
         )
     }

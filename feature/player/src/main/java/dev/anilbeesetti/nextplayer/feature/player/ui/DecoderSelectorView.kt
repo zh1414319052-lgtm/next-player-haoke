@@ -53,7 +53,7 @@ fun BoxScope.DecoderSelectorView(
     ) {
         Column(
             modifier = Modifier
-                .verticalScroll(state = rememberScrollState())
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -87,14 +87,11 @@ private fun DecoderTrackTypeSelector(
             SegmentedButton(
                 selected = selectedTrackType == trackType,
                 onClick = { onTrackTypeSelected(trackType) },
-                shape = SegmentedButtonDefaults.itemShape(
-                    index = index,
-                    trackTypes.size,
-                ),
+                shape = SegmentedButtonDefaults.itemShape(index, trackTypes.size),
             ) {
                 Text(
                     text = stringResource(
-                        id = when (trackType) {
+                        when (trackType) {
                             DecoderTrackType.VIDEO -> R.string.video
                             DecoderTrackType.AUDIO -> R.string.audio
                         },
@@ -106,7 +103,10 @@ private fun DecoderTrackTypeSelector(
 }
 
 @Composable
-private fun DecoderModeGroup(selectedMode: DecoderMode?, onModeSelected: (DecoderMode) -> Unit) {
+private fun DecoderModeGroup(
+    selectedMode: DecoderMode?,
+    onModeSelected: (DecoderMode) -> Unit,
+) {
     Column(modifier = Modifier.selectableGroup()) {
         selectableDecoderModes.forEach { mode ->
             DecoderModeRow(
@@ -119,20 +119,17 @@ private fun DecoderModeGroup(selectedMode: DecoderMode?, onModeSelected: (Decode
 }
 
 @Composable
-private fun DecoderModeRow(mode: DecoderMode, selected: Boolean, onClick: () -> Unit) {
+private fun DecoderModeRow(
+    mode: DecoderMode,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape = RoundedCornerShape(4.dp))
-            .selectable(
-                selected = selected,
-                onClick = onClick,
-                role = Role.RadioButton,
-            )
-            .padding(
-                horizontal = 4.dp,
-                vertical = 8.dp,
-            ),
+            .clip(RoundedCornerShape(4.dp))
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
+            .padding(horizontal = 4.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {

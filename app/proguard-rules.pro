@@ -52,3 +52,31 @@
 -dontwarn org.ietf.jgss.**
 -dontwarn org.openjsse.**
 -dontwarn java.rmi.UnmarshalException
+
+# EdDSA-Java has an optional Sun JDK key adapter, absent on Android.
+# The update validator constructs EdDSAPublicKey directly from the pinned raw key.
+-dontwarn sun.security.x509.X509Key
+
+# Public integration surfaces exercised from the separately signed device-test APK.
+# Keep their callable shape so tests run against the exact distributable, R8-shrunk APK.
+-keep class androidx.tracing.** { public *; }
+-keep class dev.anilbeesetti.nextplayer.updates.** { public *; }
+-keep class dev.anilbeesetti.nextplayer.feature.player.interpolation.** { public *; }
+-keep class dev.anilbeesetti.nextplayer.core.common.PrimaryLanguage { public *; }
+-keep class dev.anilbeesetti.nextplayer.core.data.repository.PreferencesRepository { public *; }
+-keep class dev.anilbeesetti.nextplayer.core.model.PlayerPreferences { public *; }
+-keep class dev.anilbeesetti.nextplayer.feature.player.service.CustomCommands { public *; }
+-keep class org.koin.core.context.GlobalContext { public *; }
+-keep class org.koin.core.Koin { public *; }
+-keep class androidx.media3.common.util.GlUtil { public *; }
+-keep class androidx.media3.common.GlTextureInfo { public *; }
+-keep class androidx.media3.effect.DefaultGlObjectsProvider { public *; }
+-keep class androidx.media3.effect.GlShaderProgram** { public *; }
+# Android instrumentation shares these libraries with the target process. Retain
+# their complete public API, including Kotlin facade classes that R8 otherwise
+# inlines away; mapping names alone cannot restore a removed runtime entry point.
+-keep class kotlin.** { public protected *; }
+-keep class kotlinx.coroutines.** { public protected *; }
+-keep class androidx.media3.** { public protected *; }
+-keep class org.koin.core.** { public protected *; }
+-keep class com.google.common.util.concurrent.** { public protected *; }

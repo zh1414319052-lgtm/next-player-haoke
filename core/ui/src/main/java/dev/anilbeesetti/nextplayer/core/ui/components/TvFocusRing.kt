@@ -31,16 +31,10 @@ fun Modifier.tvFocusRing(
     width: Dp = 3.dp,
 ): Modifier {
     if (!isTv) return this
-    var focused by remember { mutableStateOf(value = false) }
+    var focused by remember { mutableStateOf(false) }
     return this
         .onFocusChanged { focused = it.hasFocus }
-        .thenIf(condition = focused) {
-            border(
-                width = width,
-                color = color,
-                shape = shape,
-            )
-        }
+        .thenIf(focused) { border(width = width, color = color, shape = shape) }
 }
 
 /**
@@ -55,10 +49,5 @@ fun Modifier.tvFocusRing(
 ): Modifier {
     val context = LocalContext.current
     val isTv = remember { context.isTelevision }
-    return tvFocusRing(
-        isTv = isTv,
-        shape = shape,
-        color = color,
-        width = width,
-    )
+    return tvFocusRing(isTv = isTv, shape = shape, color = color, width = width)
 }

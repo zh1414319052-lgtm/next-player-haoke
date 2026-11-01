@@ -24,6 +24,8 @@ render.experimental.xml
 
 # Keystore files
 *.jks
+*.p12
+*.dpapi
 
 # Google Services (e.g. APIs or Firebase)
 google-services.json
@@ -48,3 +50,20 @@ vendor/
 .junie
 docs/
 .superpowers
+# Local verification artifacts
+work/
+
+# Publish only the maintained design/release sources, excluding local workbench state.
+!docs/
+docs/*
+!docs/HAOKE_HANDOFF.json
+!docs/design/
+docs/design/*
+!docs/design/CINEMA-UI.md
+!docs/design/next-player-design.haoke-ui.json
+!docs/design/references/
+docs/**/*.collab.sqlite3*
+docs/**/*.lock
+*.keystore
+.env
+.env.*

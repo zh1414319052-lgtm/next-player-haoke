@@ -48,52 +48,48 @@ class NextOutlinedTextFieldTest {
     fun dpadCanMoveThroughFieldsWithoutOpeningTheKeyboard() {
         assumeTrue(composeRule.activity.isTelevision)
         showForm()
-        composeRule.onNodeWithText(text = "Before").requestFocus()
+        composeRule.onNodeWithText("Before").requestFocus()
         press(Key.DirectionDown)
-        composeRule.onNodeWithTag(testTag = "first").assertIsFocused()
+        composeRule.onNodeWithTag("first").assertIsFocused()
         assertKeyboardStaysHidden()
         press(Key.DirectionDown)
-        composeRule.onNodeWithTag(testTag = "second").assertIsFocused()
+        composeRule.onNodeWithTag("second").assertIsFocused()
         assertKeyboardStaysHidden()
         press(Key.DirectionDown)
-        composeRule.onNodeWithText(text = "After").assertIsFocused()
+        composeRule.onNodeWithText("After").assertIsFocused()
     }
 
     @Test
     fun centerAndEnterOpenTheKeyboardAndCanReopenItAfterBack() {
         assumeTrue(composeRule.activity.isTelevision)
         showForm()
-        composeRule.onNodeWithTag(testTag = "first").requestFocus()
+        composeRule.onNodeWithTag("first").requestFocus()
         assertKeyboardStaysHidden()
-        listOf(
-            Key.DirectionCenter,
-            Key.Enter,
-            Key.NumPadEnter,
-        ).forEach { key ->
-            press(key = key)
+        listOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter).forEach { key ->
+            press(key)
             waitForKeyboard(shown = true)
             pressBack()
             waitForKeyboard(shown = false)
-            composeRule.onNodeWithTag(testTag = "first").assertIsFocused()
+            composeRule.onNodeWithTag("first").assertIsFocused()
         }
-        composeRule.onNodeWithTag(testTag = "first").assertTextEquals("")
+        composeRule.onNodeWithTag("first").assertTextEquals("")
     }
 
     @Test
     fun returningToAnEditedFieldRequiresAnotherClick() {
         assumeTrue(composeRule.activity.isTelevision)
         showForm()
-        composeRule.onNodeWithTag(testTag = "first").requestFocus()
+        composeRule.onNodeWithTag("first").requestFocus()
         press(Key.DirectionCenter)
         waitForKeyboard(shown = true)
-        composeRule.onNodeWithTag(testTag = "first").performTextInput(text = "Clip")
+        composeRule.onNodeWithTag("first").performTextInput("Clip")
         pressBack()
         waitForKeyboard(shown = false)
         press(Key.DirectionDown)
-        composeRule.onNodeWithTag(testTag = "second").assertIsFocused()
+        composeRule.onNodeWithTag("second").assertIsFocused()
         assertKeyboardStaysHidden()
         press(Key.DirectionUp)
-        composeRule.onNodeWithTag(testTag = "first").assertIsFocused().assertTextEquals("Clip")
+        composeRule.onNodeWithTag("first").assertIsFocused().assertTextEquals("Clip")
         assertKeyboardStaysHidden()
         press(Key.DirectionCenter)
         waitForKeyboard(shown = true)
@@ -104,29 +100,21 @@ class NextOutlinedTextFieldTest {
         assumeTrue(composeRule.activity.isTelevision)
         composeRule.setContent {
             NextPlayerTheme {
-                RenameDialog(
-                    name = "Original",
-                    onDismiss = {},
-                    onDone = {},
-                )
+                RenameDialog(name = "Original", onDismiss = {}, onDone = {})
             }
         }
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodes(
-                androidx.compose.ui.test.isFocused(),
-            ).fetchSemanticsNodes().isNotEmpty()
+        composeRule.waitUntil(5_000) {
+            composeRule.onAllNodes(androidx.compose.ui.test.isFocused()).fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithText(text = "Original").assertIsFocused()
+        composeRule.onNodeWithText("Original").assertIsFocused()
         assertKeyboardStaysHidden()
-        composeRule.onNodeWithText(text = "Original").performKeyInput {
-            pressKey(Key.DirectionCenter)
-        }
+        composeRule.onNodeWithText("Original").performKeyInput { pressKey(Key.DirectionCenter) }
         waitForKeyboard(shown = true)
-        composeRule.onNodeWithText(text = "Original").performTextInput(text = " edited")
-        composeRule.onNodeWithText(text = "Original edited").assertIsFocused()
+        composeRule.onNodeWithText("Original").performTextInput(" edited")
+        composeRule.onNodeWithText("Original edited").assertIsFocused()
         pressBack()
         waitForKeyboard(shown = false)
-        composeRule.onNodeWithText(text = "Original edited").assertIsFocused()
+        composeRule.onNodeWithText("Original edited").assertIsFocused()
     }
 
     @Test
@@ -139,17 +127,14 @@ class NextOutlinedTextFieldTest {
                     value = "Query",
                     onValueChange = {},
                     trailingIcon = {
-                        IconButton(
-                            onClick = {
-                                clicked = true
-                            },
-                            modifier = Modifier.testTag(tag = "clear"),
-                        ) { Text(text = "Clear") }
+                        IconButton(onClick = { clicked = true }, modifier = Modifier.testTag("clear")) {
+                            Text("Clear")
+                        }
                     },
                 )
             }
         }
-        composeRule.onNodeWithTag(testTag = "clear").requestFocus()
+        composeRule.onNodeWithTag("clear").requestFocus()
         press(Key.DirectionCenter)
         composeRule.runOnIdle { assertTrue(clicked) }
         assertKeyboardStaysHidden()
@@ -159,64 +144,57 @@ class NextOutlinedTextFieldTest {
     fun phoneFocusStartsEditingWithoutConfirmation() {
         assumeFalse(composeRule.activity.isTelevision)
         showForm()
-        composeRule.onNodeWithTag(testTag = "first").requestFocus()
+        composeRule.onNodeWithTag("first").requestFocus()
         waitForKeyboard(shown = true)
-        composeRule.onNodeWithTag(testTag = "first").performTextInput(text = "Phone input")
-        composeRule.onNodeWithTag(testTag = "first").assertTextEquals("Phone input")
+        composeRule.onNodeWithTag("first").performTextInput("Phone input")
+        composeRule.onNodeWithTag("first").assertTextEquals("Phone input")
     }
 
     private fun showForm() {
         composeRule.setContent {
             NextPlayerTheme {
-                var first by remember { mutableStateOf(value = "") }
-                var second by remember { mutableStateOf(value = "") }
+                var first by remember { mutableStateOf("") }
+                var second by remember { mutableStateOf("") }
                 Column {
-                    Button(onClick = {}) { Text(text = "Before") }
+                    Button(onClick = {}) { Text("Before") }
                     NextOutlinedTextField(
                         value = first,
                         onValueChange = { first = it },
                         singleLine = true,
-                        modifier = Modifier.testTag(tag = "first"),
+                        modifier = Modifier.testTag("first"),
                     )
                     NextOutlinedTextField(
                         value = second,
                         onValueChange = { second = it },
                         singleLine = true,
-                        modifier = Modifier.testTag(tag = "second"),
+                        modifier = Modifier.testTag("second"),
                     )
-                    Button(onClick = {}) { Text(text = "After") }
+                    Button(onClick = {}) { Text("After") }
                 }
             }
         }
     }
 
     private fun press(key: Key) {
-        composeRule.onRoot().performKeyInput { pressKey(key = key) }
+        composeRule.onRoot().performKeyInput { pressKey(key) }
         composeRule.waitForIdle()
     }
 
     private fun assertKeyboardStaysHidden() {
         // IME visibility changes asynchronously, after Compose has become idle.
         SystemClock.sleep(500)
-        assertFalse(
-            "Focus alone must not open the TV keyboard",
-            keyboardIsShown(),
-        )
+        assertFalse("Focus alone must not open the TV keyboard", keyboardIsShown())
     }
 
     private fun waitForKeyboard(shown: Boolean) {
-        composeRule.waitUntil(timeoutMillis = 5_000) { keyboardIsShown() == shown }
+        composeRule.waitUntil(5_000) { keyboardIsShown() == shown }
     }
 
     private fun keyboardIsShown(): Boolean {
         val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
-        val output = ParcelFileDescriptor.AutoCloseInputStream(
-            automation.executeShellCommand("dumpsys input_method"),
-        )
+        val output = ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand("dumpsys input_method"))
             .bufferedReader().use { it.readText() }
-        check(value = "mInputShown=" in output) {
-            "Keyboard visibility missing from input_method dump"
-        }
+        check("mInputShown=" in output) { "Keyboard visibility missing from input_method dump" }
         return "mInputShown=true" in output
     }
 }

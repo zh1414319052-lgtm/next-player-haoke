@@ -1,3 +1,5 @@
+@file:androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+
 package dev.anilbeesetti.nextplayer.feature.player.ui
 
 import android.content.res.Configuration
@@ -34,7 +36,7 @@ fun BoxScope.OverlayShowView(
         modifier = Modifier
             .matchParentSize()
             .then(
-                other = if (overlayView != null) {
+                if (overlayView != null) {
                     Modifier.noRippleClickable(onClick = onDismiss)
                 } else {
                     Modifier

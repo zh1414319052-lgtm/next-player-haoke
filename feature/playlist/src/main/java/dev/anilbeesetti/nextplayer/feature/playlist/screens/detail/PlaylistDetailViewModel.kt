@@ -36,14 +36,16 @@ class PlaylistDetailViewModel(
     @InjectedParam internal var output: Output,
 ) : MviViewModel<PlaylistDetailUiState, PlaylistDetailUiAction>() {
 
-    data class Input(val playlistId: Long)
+    data class Input(
+        val playlistId: Long,
+    )
 
     data class Output(
         val navigateUp: () -> Unit,
         val playPlaylist: (playlistId: Long, startUri: Uri) -> Unit,
     )
 
-    private val stateInternal = MutableStateFlow(value = PlaylistDetailUiState())
+    private val stateInternal = MutableStateFlow(PlaylistDetailUiState())
     override val state: StateFlow<PlaylistDetailUiState> = stateInternal.asStateFlow()
 
     private var refreshJob: Job? = null
@@ -53,7 +55,7 @@ class PlaylistDetailViewModel(
             observePlaylist(input.playlistId).collect { playlist ->
                 stateInternal.update { currentState ->
                     currentState.copy(
-                        playlistDataState = DataState.Success(value = playlist),
+                        playlistDataState = DataState.Success(playlist),
                         isReordering = currentState.isReordering &&
                             playlist?.type == PlaylistType.LOCAL &&
                             playlist.items.size > 1,
@@ -66,65 +68,41 @@ class PlaylistDetailViewModel(
     override fun onAction(action: PlaylistDetailUiAction) {
         when (action) {
             is PlaylistDetailUiAction.OnNavigateUpClick -> output.navigateUp()
-
             is PlaylistDetailUiAction.OnSearchClick -> stateInternal.update {
-                it.copy(
-                    isSearching = true,
-                    isReordering = false,
-                )
+                it.copy(isSearching = true, isReordering = false)
             }
-
             is PlaylistDetailUiAction.OnSearchQueryChange -> stateInternal.update {
                 it.copy(searchQuery = action.query)
             }
-
             is PlaylistDetailUiAction.OnCloseSearchClick -> stateInternal.update {
-                it.copy(
-                    isSearching = false,
-                    searchQuery = "",
-                )
+                it.copy(isSearching = false, searchQuery = "")
             }
-
             is PlaylistDetailUiAction.OnReorderClick -> {
                 if (currentPlaylist()?.type == PlaylistType.LOCAL) {
                     stateInternal.update {
-                        it.copy(
-                            isReordering = true,
-                            isSearching = false,
-                            searchQuery = "",
-                        )
+                        it.copy(isReordering = true, isSearching = false, searchQuery = "")
                     }
                 }
             }
-
             is PlaylistDetailUiAction.OnFinishReorderingClick -> stateInternal.update {
                 it.copy(isReordering = false)
             }
-
             is PlaylistDetailUiAction.OnPlay -> play(action.startUri)
-
             is PlaylistDetailUiAction.Refresh -> refreshM3U()
-
             is PlaylistDetailUiAction.ShowRemoveDialogFor -> stateInternal.update {
                 it.copy(showRemoveDialogFor = action.item)
             }
-
             is PlaylistDetailUiAction.DismissRemoveDialog -> stateInternal.update {
                 it.copy(showRemoveDialogFor = null)
             }
-
             is PlaylistDetailUiAction.RemoveVideo -> removeVideo(action.videoUri)
-
             is PlaylistDetailUiAction.ReplaceOrder -> replaceOrder(action.orderedUris)
         }
     }
 
     private fun play(startUri: Uri) {
         markVideoPlayed(startUri.toString())
-        output.playPlaylist(
-            input.playlistId,
-            startUri,
-        )
+        output.playPlaylist(input.playlistId, startUri)
     }
 
     private fun refreshM3U() {
@@ -133,17 +111,14 @@ class PlaylistDetailViewModel(
         refreshJob = viewModelScope.launch {
             stateInternal.update { it.copy(isRefreshing = true) }
             try {
-                val parsed = parseLinkedSource(playlist = playlist).getOrThrow()
-                playlistRepository.replaceM3UItems(
-                    input.playlistId,
-                    parsed.items,
-                )
+                val parsed = parseLinkedSource(playlist).getOrThrow()
+                playlistRepository.replaceM3UItems(input.playlistId, parsed.items)
                 showToast(systemService.getString(R.string.playlist_refresh_succeeded))
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Throwable) {
                 showToast(
-                    message = error.message?.takeIf(predicate = String::isNotBlank)
+                    error.message?.takeIf(String::isNotBlank)
                         ?: systemService.getString(R.string.playlist_refresh_failed),
                 )
             } finally {
@@ -154,39 +129,29 @@ class PlaylistDetailViewModel(
 
     private suspend fun parseLinkedSource(playlist: Playlist): Result<M3UPlaylist> {
         val source = playlist.source
-            ?: return Result.failure(
-                exception = IllegalStateException("Linked playlist source is missing"),
-            )
+            ?: return Result.failure(IllegalStateException("Linked playlist source is missing"))
         return when (playlist.type) {
-            PlaylistType.M3U_URL -> m3uParser.parseUrl(url = source)
-
+            PlaylistType.M3U_URL -> m3uParser.parseUrl(source)
             PlaylistType.M3U_FILE -> m3uParser.parseUri(source.toUri())
-
             PlaylistType.LOCAL -> Result.failure(
-                exception = IllegalStateException("Local playlists do not have a linked source"),
+                IllegalStateException("Local playlists do not have a linked source"),
             )
         }
     }
 
     private fun removeVideo(videoUri: String) {
         updatePlaylist(
-            block = {
-                playlistRepository.removeVideo(
-                    input.playlistId,
-                    videoUri = videoUri,
-                )
+            block = { playlistRepository.removeVideo(input.playlistId, videoUri) },
+            onSuccess = {
+                stateInternal.update { it.copy(showRemoveDialogFor = null) }
             },
-            onSuccess = { stateInternal.update { it.copy(showRemoveDialogFor = null) } },
         )
     }
 
     private fun replaceOrder(orderedUris: List<String>) {
         updatePlaylist(
             block = {
-                playlistRepository.replaceOrder(
-                    input.playlistId,
-                    orderedUris = orderedUris,
-                )
+                playlistRepository.replaceOrder(input.playlistId, orderedUris)
             },
         )
     }
@@ -194,10 +159,7 @@ class PlaylistDetailViewModel(
     private fun markVideoPlayed(videoUri: String) {
         viewModelScope.launch {
             try {
-                playlistRepository.markVideoPlayed(
-                    input.playlistId,
-                    videoUri = videoUri,
-                )
+                playlistRepository.markVideoPlayed(input.playlistId, videoUri)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Throwable) {
@@ -206,7 +168,10 @@ class PlaylistDetailViewModel(
         }
     }
 
-    private fun updatePlaylist(block: suspend () -> Unit, onSuccess: () -> Unit = {}) {
+    private fun updatePlaylist(
+        block: suspend () -> Unit,
+        onSuccess: () -> Unit = {},
+    ) {
         if (state.value.updateActionState.isRunning) return
         viewModelScope.launch {
             stateInternal.update { it.copy(updateActionState = ActionState.Running) }
@@ -220,16 +185,9 @@ class PlaylistDetailViewModel(
             } catch (error: Throwable) {
                 val message = systemService.getString(R.string.playlist_update_failed)
                 stateInternal.update {
-                    it.copy(
-                        updateActionState = ActionState.Failed(
-                            value = Error(
-                                message,
-                                error,
-                            ),
-                        ),
-                    )
+                    it.copy(updateActionState = ActionState.Failed(Error(message, error)))
                 }
-                showToast(message = message)
+                showToast(message)
             }
         }
     }
@@ -238,10 +196,7 @@ class PlaylistDetailViewModel(
         (state.value.playlistDataState as? DataState.Success)?.value
 
     private fun showToast(message: String) {
-        systemService.showToast(
-            text = message,
-            Toast.LENGTH_SHORT,
-        )
+        systemService.showToast(message, Toast.LENGTH_SHORT)
     }
 }
 

@@ -3,14 +3,14 @@ package dev.anilbeesetti.nextplayer.core.datastore.datasource
 import androidx.datastore.core.DataStore
 import dev.anilbeesetti.nextplayer.core.common.Logger
 import dev.anilbeesetti.nextplayer.core.common.di.DiQualifiers
+import dev.anilbeesetti.nextplayer.core.model.FrameInterpolationTarget
 import dev.anilbeesetti.nextplayer.core.model.PlayerPreferences
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Named
 
 @Factory(binds = [])
 class PlayerPreferencesDataSource(
-    @Named(DiQualifiers.PLAYER_PREFERENCES) private val preferencesDataStore:
-    DataStore<PlayerPreferences>,
+    @Named(DiQualifiers.PLAYER_PREFERENCES) private val preferencesDataStore: DataStore<PlayerPreferences>,
 ) : PreferencesDataSource<PlayerPreferences> {
 
     companion object {
@@ -21,12 +21,11 @@ class PlayerPreferencesDataSource(
 
     override suspend fun update(transform: suspend (PlayerPreferences) -> PlayerPreferences) {
         try {
-            preferencesDataStore.updateData(transform = transform)
+            preferencesDataStore.updateData { current ->
+                FrameInterpolationTarget.normalize(transform(current))
+            }
         } catch (ioException: Exception) {
-            Logger.logError(
-                tag = TAG,
-                message = "Failed to update app preferences: $ioException",
-            )
+            Logger.logError(TAG, "Failed to update app preferences: $ioException")
         }
     }
 }

@@ -4,7 +4,6 @@ import android.app.PictureInPictureParams
 import android.app.PictureInPictureUiState
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.graphics.Rect
 import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.DisposableEffectResult
@@ -48,21 +47,13 @@ class PictureInPictureStateTest {
     @Before
     fun setUp() {
         shadowOf(RuntimeEnvironment.getApplication().packageManager)
-            .setSystemFeature(
-                PackageManager.FEATURE_PICTURE_IN_PICTURE,
-                true,
-            )
+            .setSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE, true)
         controller = Robolectric.buildActivity(PipActivity::class.java).setup()
         activity = controller.get()
-        shadowOf(
-            activity.application,
-        ).grantPermissions("${activity.packageName}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION")
+        shadowOf(activity.application).grantPermissions("${activity.packageName}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION")
         player = TestPlayer()
-        state = PictureInPictureState(
-            player = player,
-            activity = activity,
-        )
-        listeners = state.handleListeners(disposableEffectScope = DisposableEffectScope())
+        state = PictureInPictureState(player, activity)
+        listeners = state.handleListeners(DisposableEffectScope())
     }
 
     @After
@@ -79,108 +70,50 @@ class PictureInPictureStateTest {
     }
 
     @Test
-    fun layoutChangesWaitForPipEntryBeforeUpdatingParameters() {
-        val fullscreenRect = Rect(
-            240,
-            0,
-            2160,
-            1080,
-        )
-        val pipRect = Rect(
-            0,
-            0,
-            1080,
-            608,
-        )
-        state.setVideoViewRect(rect = fullscreenRect)
-        val updatesBeforeEntry = activity.paramsUpdateCount
-        activity.enterPictureInPictureMode(PictureInPictureParams.Builder().build())
-        assertTrue(activity.isInPictureInPictureMode)
-
-        state.setVideoViewRect(rect = pipRect)
-        assertEquals(
-            updatesBeforeEntry,
-            activity.paramsUpdateCount,
-        )
-
-        enterPip()
-        val updatesAfterEntry = activity.paramsUpdateCount
-        state.setVideoViewRect(rect = pipRect)
-        assertEquals(
-            updatesAfterEntry + 1,
-            activity.paramsUpdateCount,
-        )
-    }
-
-    @Test
     fun pipPauseAndPlayActionsControlPlaybackWithoutReturningToFullscreen() = withObservedState {
         enterPip()
-        sendAction(title = "pause")
+        sendAction("pause")
         assertFalse(player.playWhenReady)
         assertFalse(player.isPlaying)
-        assertEquals(
-            "play",
-            activity.params!!.actions[1].title,
-        )
+        assertEquals("play", activity.params!!.actions[1].title)
 
-        sendAction(title = "play")
+        sendAction("play")
         assertTrue(player.playWhenReady)
         assertTrue(player.isPlaying)
-        assertEquals(
-            "pause",
-            activity.params!!.actions[1].title,
-        )
+        assertEquals("pause", activity.params!!.actions[1].title)
     }
 
     @Test
     fun pipSkipActionsControlThePlaylist() = withObservedState {
         enterPip()
-        sendAction(title = "skip to next")
-        assertEquals(
-            2,
-            player.currentMediaItemIndex,
-        )
-        sendAction(title = "skip to previous")
-        assertEquals(
-            1,
-            player.currentMediaItemIndex,
-        )
+        sendAction("skip to next")
+        assertEquals(2, player.currentMediaItemIndex)
+        sendAction("skip to previous")
+        assertEquals(1, player.currentMediaItemIndex)
     }
 
     @Test
     fun exitingPipRemovesTheReceiverAndReentryRestoresControls() = withObservedState {
         enterPip()
-        assertEquals(
-            1,
-            pipReceiverCount(),
-        )
+        assertEquals(1, pipReceiverCount())
         exitPip()
         assertFalse(state.isInPictureInPictureMode)
-        assertEquals(
-            0,
-            pipReceiverCount(),
-        )
-        sendAction(title = "pause")
+        assertEquals(0, pipReceiverCount())
+        sendAction("pause")
         assertTrue(player.isPlaying)
 
         enterPip()
-        sendAction(title = "pause")
+        sendAction("pause")
         assertFalse(player.isPlaying)
     }
 
     @Test
     fun disposalRemovesThePipReceiver() = withObservedState {
         enterPip()
-        assertEquals(
-            1,
-            pipReceiverCount(),
-        )
+        assertEquals(1, pipReceiverCount())
         listeners.dispose()
-        assertEquals(
-            0,
-            pipReceiverCount(),
-        )
-        sendAction(title = "pause")
+        assertEquals(0, pipReceiverCount())
+        sendAction("pause")
         assertTrue(player.isPlaying)
     }
 
@@ -191,57 +124,34 @@ class PictureInPictureStateTest {
             // The system constructs this state using a non-public constructor.
             ReflectionHelpers.callConstructor(
                 PictureInPictureUiState::class.java,
-                ClassParameter.from(
-                    Boolean::class.javaPrimitiveType,
-                    false,
-                ),
-                ClassParameter.from(
-                    Boolean::class.javaPrimitiveType,
-                    true,
-                ),
+                ClassParameter.from(Boolean::class.javaPrimitiveType, false),
+                ClassParameter.from(Boolean::class.javaPrimitiveType, true),
             ),
         )
         shadowOf(Looper.getMainLooper()).idle()
         assertTrue(state.isInPictureInPictureMode)
-        assertEquals(
-            1,
-            pipReceiverCount(),
-        )
+        assertEquals(1, pipReceiverCount())
 
         enterPip()
-        assertEquals(
-            1,
-            pipReceiverCount(),
-        )
-        sendAction(title = "pause")
+        assertEquals(1, pipReceiverCount())
+        sendAction("pause")
         assertFalse(player.isPlaying)
         exitPip()
-        assertEquals(
-            0,
-            pipReceiverCount(),
-        )
+        assertEquals(0, pipReceiverCount())
     }
 
     private fun withObservedState(block: suspend TestScope.() -> Unit) = runTest {
-        backgroundScope.launch(context = UnconfinedTestDispatcher(scheduler = testScheduler)) {
-            state.observe()
-        }
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { state.observe() }
         block()
     }
 
     private fun enterPip() {
-        activity.onPictureInPictureModeChanged(
-            true,
-            Configuration(),
-        )
+        activity.onPictureInPictureModeChanged(true, Configuration())
         shadowOf(Looper.getMainLooper()).idle()
     }
 
     private fun exitPip() {
-        activity.onPictureInPictureModeChanged(
-            false,
-            Configuration(),
-        )
+        activity.onPictureInPictureModeChanged(false, Configuration())
         shadowOf(Looper.getMainLooper()).idle()
     }
 
@@ -256,11 +166,9 @@ class PictureInPictureStateTest {
 
     class PipActivity : ComponentActivity() {
         var params: PictureInPictureParams? = null
-        var paramsUpdateCount = 0
 
         override fun setPictureInPictureParams(params: PictureInPictureParams) {
             this.params = params
-            paramsUpdateCount++
         }
     }
 
@@ -278,29 +186,19 @@ class PictureInPictureStateTest {
             .setPlaylist((0..2).map { MediaItemData.Builder(it).setDurationUs(60_000_000).build() })
             .setCurrentMediaItemIndex(1)
             .setPlaybackState(Player.STATE_READY)
-            .setPlayWhenReady(
-                true,
-                Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST,
-            )
+            .setPlayWhenReady(true, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
             .build()
 
         override fun getState(): State = state
 
         override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {
             state = state.buildUpon()
-                .setPlayWhenReady(
-                    playWhenReady,
-                    Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST,
-                )
+                .setPlayWhenReady(playWhenReady, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
                 .build()
             return Futures.immediateVoidFuture()
         }
 
-        override fun handleSeek(
-            mediaItemIndex: Int,
-            positionMs: Long,
-            seekCommand: Int,
-        ): ListenableFuture<*> {
+        override fun handleSeek(mediaItemIndex: Int, positionMs: Long, seekCommand: Int): ListenableFuture<*> {
             state = state.buildUpon().setCurrentMediaItemIndex(mediaItemIndex).build()
             return Futures.immediateVoidFuture()
         }

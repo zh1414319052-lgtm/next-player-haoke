@@ -33,16 +33,11 @@ data class AddConnectionRoute(val connectionId: Long? = null) : NavKey
 data class NetworkBrowseRoute(val connectionId: Long, val path: String? = null) : NavKey
 
 fun NavBackStack<NavKey>.navigateToAddConnection(connectionId: Long? = null) {
-    add(element = AddConnectionRoute(connectionId = connectionId))
+    add(AddConnectionRoute(connectionId))
 }
 
 fun NavBackStack<NavKey>.navigateToNetworkBrowse(connectionId: Long, path: String? = null) {
-    add(
-        element = NetworkBrowseRoute(
-            connectionId = connectionId,
-            path = path,
-        ),
-    )
+    add(NetworkBrowseRoute(connectionId, path))
 }
 
 fun EntryProviderScope<NavKey>.networkEntry(
@@ -68,16 +63,18 @@ fun EntryProviderScope<NavKey>.networkEntry(
     }
 }
 
-fun EntryProviderScope<NavKey>.addConnectionEntry(onNavigateUp: () -> Unit) {
+fun EntryProviderScope<NavKey>.addConnectionEntry(
+    onNavigateUp: () -> Unit,
+) {
     entry<AddConnectionRoute>(
         metadata = metadata {
-            put(key = NavDisplay.TransitionKey) {
+            put(NavDisplay.TransitionKey) {
                 slideInVertically { it } togetherWith scaleOut(targetScale = 0.95f)
             }
-            put(key = NavDisplay.PopTransitionKey) {
+            put(NavDisplay.PopTransitionKey) {
                 scaleIn(initialScale = 0.95f) togetherWith slideOutVertically { it }
             }
-            put(key = NavDisplay.PredictivePopTransitionKey) {
+            put(NavDisplay.PredictivePopTransitionKey) {
                 scaleIn(initialScale = 0.95f) togetherWith slideOutVertically { it }
             }
         },
@@ -115,10 +112,7 @@ fun EntryProviderScope<NavKey>.networkBrowseEntry(
             val viewModel = koinViewModel<NetworkBrowseViewModel>(
                 parameters = {
                     parametersOf(
-                        NetworkBrowseViewModel.Input(
-                            connectionId = key.connectionId,
-                            path = key.path,
-                        ),
+                        NetworkBrowseViewModel.Input(connectionId = key.connectionId, path = key.path),
                         output,
                     )
                 },

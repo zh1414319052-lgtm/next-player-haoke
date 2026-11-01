@@ -14,22 +14,21 @@ dependencyResolutionManagement {
     }
 }
 
+
 // Opt in with -PnextlibPath=../nextlib to test unpublished decoder changes.
 providers.gradleProperty("nextlibPath").orNull?.let { nextlibPath ->
     includeBuild(nextlibPath) {
         dependencySubstitution {
-            substitute(
-                module("io.github.anilbeesetti:nextlib-media3ext"),
-            ).using(project(":media3ext"))
-            substitute(
-                module("io.github.anilbeesetti:nextlib-mediainfo"),
-            ).using(project(":mediainfo"))
+            substitute(module("io.github.anilbeesetti:nextlib-media3ext")).using(project(":media3ext"))
+            substitute(module("io.github.anilbeesetti:nextlib-mediainfo")).using(project(":mediainfo"))
         }
     }
 }
 
 rootProject.name = "NextPlayer"
 include(":app")
+include(":core:analysis")
+include(":core:cast")
 include(":core:common")
 include(":core:data")
 include(":core:database")
@@ -43,5 +42,3 @@ include(":feature:playlist")
 include(":feature:player")
 include(":feature:settings")
 include(":feature:videopicker")
-include(":ktlint-rules")
-project(":ktlint-rules").projectDir = file("tools/ktlint-rules")

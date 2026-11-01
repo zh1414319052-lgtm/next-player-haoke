@@ -6,6 +6,11 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -14,6 +19,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,21 +29,27 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.core.ui.preview.DayNightPreview
 import dev.anilbeesetti.nextplayer.core.ui.theme.NextPlayerTheme
+import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
+import androidx.core.net.toUri
 
 @Composable
-fun PermissionDetailView(text: String) {
+fun PermissionDetailView(
+    text: String,
+    title: String = stringResource(R.string.permission_not_granted),
+    onRequestPermission: (() -> Unit)? = null,
+) {
     val context = LocalContext.current
+    Box(Modifier.fillMaxSize().padding(28.dp), contentAlignment = Alignment.Center) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = stringResource(id = R.string.permission_not_granted),
+            text = title,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
@@ -45,19 +58,27 @@ fun PermissionDetailView(text: String) {
         Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 5.dp),
         )
-        Spacer(modifier = Modifier.height(10.dp))
-        Button(
+        Spacer(modifier = Modifier.height(24.dp))
+        onRequestPermission?.let { request ->
+            Button(onClick = request) { Text(stringResource(R.string.grant_permission)) }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        TextButton(
             onClick = {
                 Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                     data = ("package:" + context.packageName).toUri()
                     context.startActivity(this)
                 }
             },
-        ) { Text(text = stringResource(R.string.open_settings)) }
+        ) {
+            Text(text = stringResource(R.string.open_settings))
+        }
+    }
     }
 }
 

@@ -5,6 +5,7 @@ import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.activity.compose.LocalActivity
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInWindow
@@ -12,11 +13,10 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.compose.PlayerSurface
-import androidx.media3.ui.compose.SURFACE_TYPE_SURFACE_VIEW
 import androidx.media3.ui.compose.modifiers.resizeWithContentScale
 import androidx.media3.ui.compose.state.rememberPresentationState
 import dev.anilbeesetti.nextplayer.feature.player.extensions.toContentScale
+import dev.anilbeesetti.nextplayer.feature.player.interpolation.InterpolationPlayerSurface
 import dev.anilbeesetti.nextplayer.feature.player.state.PictureInPictureState
 import dev.anilbeesetti.nextplayer.feature.player.state.VideoZoomAndContentScaleState
 import dev.anilbeesetti.nextplayer.feature.player.ui.ShutterView
@@ -31,58 +31,51 @@ fun PlayerContentFrame(
     pictureInPictureState: PictureInPictureState,
     videoZoomAndContentScaleState: VideoZoomAndContentScaleState,
     subtitleConfiguration: SubtitleConfiguration,
-    videoVisible: Boolean = true,
-    displayAspectRatio: Float? = null,
+    bottomControlsHeightPx: Int = 0,
 ) {
-    val presentationState = rememberPresentationState(player = player)
+    val presentationState = rememberPresentationState(player)
+    val activity = LocalActivity.current as? PlayerActivity
     Box(modifier.fillMaxSize()) {
-        if (videoVisible) {
-            PlayerSurface(
-                player = player,
-                surfaceType = SURFACE_TYPE_SURFACE_VIEW,
-                modifier = Modifier
-                    .resizeWithContentScale(
-                        contentScale = videoZoomAndContentScaleState.videoContentScale
-                            .toContentScale(),
-                        sourceSizeDp = presentationState.videoSizeDp?.let { size ->
-                            size.copy(
-                                width = with(LocalDensity.current) {
-                                    (
-                                        displayAspectRatio?.let {
-                                            size.height * it
-                                        } ?: size.width
-                                        ).toDp().value
-                                },
-                                height = with(LocalDensity.current) { size.height.toDp().value },
-                            )
-                        },
-                    )
-                    .onGloballyPositioned {
-                        val bounds = it.boundsInWindow()
-                        val rect = Rect(
-                            bounds.left.toInt(),
-                            bounds.top.toInt(),
-                            bounds.right.toInt(),
-                            bounds.bottom.toInt(),
+        InterpolationPlayerSurface(
+            player = player,
+            onSurfaceAvailable = { activity?.setInterpolationVideoSurface(it) },
+            onSurfaceDestroyed = { activity?.clearInterpolationVideoSurface(it) },
+            modifier = Modifier
+                .resizeWithContentScale(
+                    contentScale = videoZoomAndContentScaleState.videoContentScale.toContentScale(),
+                    sourceSizeDp = presentationState.videoSizeDp?.let { size ->
+                        size.copy(
+                            width = with(LocalDensity.current) { size.width.toDp().value },
+                            height = with(LocalDensity.current) { size.height.toDp().value },
                         )
-                        pictureInPictureState.setVideoViewRect(rect)
-                    }
-                    .graphicsLayer {
-                        scaleX = videoZoomAndContentScaleState.zoom
-                        scaleY = videoZoomAndContentScaleState.zoom
-                        translationX = videoZoomAndContentScaleState.offset.x
-                        translationY = videoZoomAndContentScaleState.offset.y
                     },
-            )
-        }
+                )
+                .onGloballyPositioned {
+                    val bounds = it.boundsInWindow()
+                    val rect = Rect(
+                        bounds.left.toInt(),
+                        bounds.top.toInt(),
+                        bounds.right.toInt(),
+                        bounds.bottom.toInt(),
+                    )
+                    pictureInPictureState.setVideoViewRect(rect)
+                }
+                .graphicsLayer {
+                    scaleX = videoZoomAndContentScaleState.zoom
+                    scaleY = videoZoomAndContentScaleState.zoom
+                    translationX = videoZoomAndContentScaleState.offset.x
+                    translationY = videoZoomAndContentScaleState.offset.y
+                },
+        )
 
         SubtitleView(
             player = player,
             isInPictureInPictureMode = pictureInPictureState.isInPictureInPictureMode,
             configuration = subtitleConfiguration,
+            controlsHeightPx = bottomControlsHeightPx,
         )
 
-        if (videoVisible && presentationState.coverSurface) {
+        if (presentationState.coverSurface) {
             ShutterView()
         }
     }

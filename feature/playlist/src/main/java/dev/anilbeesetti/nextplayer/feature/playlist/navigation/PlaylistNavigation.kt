@@ -5,7 +5,6 @@ import androidx.compose.runtime.SideEffect
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
-import dev.anilbeesetti.nextplayer.core.model.PlaylistSummary
 import dev.anilbeesetti.nextplayer.feature.playlist.screens.detail.PlaylistDetailScreen
 import dev.anilbeesetti.nextplayer.feature.playlist.screens.detail.PlaylistDetailViewModel
 import dev.anilbeesetti.nextplayer.feature.playlist.screens.list.PlaylistListScreen
@@ -21,27 +20,20 @@ data object PlaylistListRoute : NavKey
 data class PlaylistDetailRoute(val playlistId: Long) : NavKey
 
 fun NavBackStack<NavKey>.navigateToPlaylistDetail(playlistId: Long) {
-    add(element = PlaylistDetailRoute(playlistId = playlistId))
+    add(PlaylistDetailRoute(playlistId))
 }
 
 fun EntryProviderScope<NavKey>.playlistListEntry(
     onPlaylistClick: (Long) -> Unit,
     onSettingsClick: () -> Unit,
-    onAddToHomeScreen: ((PlaylistSummary) -> Unit)? = null,
 ) {
     entry<PlaylistListRoute> {
-        val output = PlaylistListViewModel.Output(
-            openPlaylist = onPlaylistClick,
-            openSettings = onSettingsClick,
-        )
+        val output = PlaylistListViewModel.Output(openPlaylist = onPlaylistClick, openSettings = onSettingsClick)
         val viewModel = koinViewModel<PlaylistListViewModel>(
             parameters = { parametersOf(output) },
         )
         SideEffect { viewModel.output = output }
-        PlaylistListScreen(
-            viewModel = viewModel,
-            onAddToHomeScreen = onAddToHomeScreen,
-        )
+        PlaylistListScreen(viewModel = viewModel)
     }
 }
 

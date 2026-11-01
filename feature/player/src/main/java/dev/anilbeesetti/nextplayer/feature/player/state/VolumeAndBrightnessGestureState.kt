@@ -27,10 +27,7 @@ fun rememberVolumeAndBrightnessGestureState(
     brightnessGestureSensitivity: Float,
 ): VolumeAndBrightnessGestureState {
     val coroutineScope = rememberCoroutineScope()
-    val volumeAndBrightnessGestureState = remember(
-        volumeState,
-        brightnessState,
-    ) {
+    val volumeAndBrightnessGestureState = remember(volumeState, brightnessState) {
         VolumeAndBrightnessGestureState(
             volumeState = volumeState,
             brightnessState = brightnessState,
@@ -54,13 +51,13 @@ class VolumeAndBrightnessGestureState(
     private val brightnessGestureSensitivity: Float,
     private val coroutineScope: CoroutineScope,
 ) {
-    var activeGesture: VerticalGesture? by mutableStateOf(value = null)
+    var activeGesture: VerticalGesture? by mutableStateOf(null)
         private set
 
-    var volumeChangePercentage: Int by mutableIntStateOf(value = 0)
+    var volumeChangePercentage: Int by mutableIntStateOf(0)
         private set
 
-    var brightnessChangePercentage: Int by mutableIntStateOf(value = 0)
+    var brightnessChangePercentage: Int by mutableIntStateOf(0)
         private set
 
     private var startingY = 0f
@@ -95,19 +92,18 @@ class VolumeAndBrightnessGestureState(
                     maximumValue = maxVolumePercentage - startVolumePercentage,
                 )
                 brightnessChangePercentage = 0
-                volumeState.updateVolumePercentage(percentage = newVolume)
+                volumeState.updateVolumePercentage(newVolume)
             }
 
             VerticalGesture.BRIGHTNESS -> {
-                val brightnessChange =
-                    (startingY - change.position.y) * (brightnessGestureSensitivity / 10)
+                val brightnessChange = (startingY - change.position.y) * (brightnessGestureSensitivity / 10)
                 val newBrightness = startBrightnessPercentage + brightnessChange.toInt()
                 brightnessChangePercentage = (newBrightness - startBrightnessPercentage).coerceIn(
                     minimumValue = 0 - startBrightnessPercentage,
                     maximumValue = MAX_BRIGHTNESS_PERCENTAGE - startBrightnessPercentage,
                 )
                 volumeChangePercentage = 0
-                brightnessState.updateBrightnessPercentage(percentage = newBrightness)
+                brightnessState.updateBrightnessPercentage(newBrightness)
             }
         }
     }

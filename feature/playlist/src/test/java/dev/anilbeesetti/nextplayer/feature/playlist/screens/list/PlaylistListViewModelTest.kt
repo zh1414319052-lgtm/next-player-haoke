@@ -38,7 +38,7 @@ class PlaylistListViewModelTest {
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(dispatcher = dispatcher)
+        Dispatchers.setMain(dispatcher)
         context = RuntimeEnvironment.getApplication()
         repository = FakePlaylistRepository()
         systemService = FakeSystemService()
@@ -50,40 +50,22 @@ class PlaylistListViewModelTest {
     }
 
     @Test
-    fun urlCreationParsesPersistsAndNavigatesWithoutEvents() = runTest(context = dispatcher) {
+    fun urlCreationParsesPersistsAndNavigatesWithoutEvents() = runTest(dispatcher) {
         val server = playlistServer()
         val openedIds = mutableListOf<Long>()
-        val viewModel = viewModel(openedIds = openedIds)
+        val viewModel = viewModel(openedIds)
         val source = "http://127.0.0.1:${server.address.port}/News_List.m3u"
         try {
-            viewModel.onAction(PlaylistUiAction.CreateM3UUrl(url = source))
+            viewModel.onAction(PlaylistUiAction.CreateM3UUrl(source))
             advanceUntilIdle()
 
             val call = repository.createM3UCalls.single()
-            assertEquals(
-                PlaylistType.M3U_URL,
-                call.type,
-            )
-            assertEquals(
-                source,
-                call.source,
-            )
-            assertEquals(
-                "News List",
-                call.playlist.playlistName,
-            )
-            assertEquals(
-                listOf(element = "https://media.example/live"),
-                call.playlist.items.map { it.uri },
-            )
-            assertEquals(
-                listOf(element = 42L),
-                openedIds,
-            )
-            assertEquals(
-                PlaylistCreationDialog.NONE,
-                viewModel.state.value.creationDialog,
-            )
+            assertEquals(PlaylistType.M3U_URL, call.type)
+            assertEquals(source, call.source)
+            assertEquals("News List", call.playlist.playlistName)
+            assertEquals(listOf("https://media.example/live"), call.playlist.items.map { it.uri })
+            assertEquals(listOf(42L), openedIds)
+            assertEquals(PlaylistCreationDialog.NONE, viewModel.state.value.creationDialog)
             assertTrue(viewModel.state.value.saveActionState is ActionState.Success)
             assertTrue(systemService.toasts.isEmpty())
         } finally {
@@ -92,24 +74,42 @@ class PlaylistListViewModelTest {
     }
 
     @Test
-    fun urlPersistenceFailureRemainsInlineAndDoesNotNavigate() = runTest(context = dispatcher) {
+    fun urlCreationForwardsTrimmedNameAndKeepsBlankNameNull() = runTest(dispatcher) {
+        val server = playlistServer()
+        val viewModel = viewModel(mutableListOf())
+        val source = "http://127.0.0.1:${server.address.port}/News_List.m3u"
+        try {
+            viewModel.onAction(PlaylistUiAction.CreateM3UUrl(source, "  周末放映  "))
+            advanceUntilIdle()
+
+            assertEquals("周末放映", repository.createM3UCalls.single().displayName)
+
+            viewModel.onAction(PlaylistUiAction.CreateM3UUrl(source, "   "))
+            advanceUntilIdle()
+
+            assertEquals(2, repository.createM3UCalls.size)
+            assertEquals(null, repository.createM3UCalls[1].displayName)
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test
+    fun urlPersistenceFailureRemainsInlineAndDoesNotNavigate() = runTest(dispatcher) {
         val server = playlistServer()
         repository.createM3UFailure = IllegalStateException("Database unavailable")
         val openedIds = mutableListOf<Long>()
-        val viewModel = viewModel(openedIds = openedIds)
+        val viewModel = viewModel(openedIds)
         try {
             viewModel.onAction(
                 PlaylistUiAction.CreateM3UUrl(
-                    url = "http://127.0.0.1:${server.address.port}/News_List.m3u",
+                    "http://127.0.0.1:${server.address.port}/News_List.m3u",
                 ),
             )
             advanceUntilIdle()
 
             assertTrue(viewModel.state.value.saveActionState is ActionState.Failed)
-            assertEquals(
-                "Database unavailable",
-                viewModel.state.value.saveActionState.errorMessage,
-            )
+            assertEquals("Database unavailable", viewModel.state.value.saveActionState.errorMessage)
             assertTrue(openedIds.isEmpty())
             assertTrue(systemService.toasts.isEmpty())
         } finally {
@@ -118,19 +118,16 @@ class PlaylistListViewModelTest {
     }
 
     @Test
-    fun duplicateUrlCreationRequestsCreateOnlyOnePlaylist() = runTest(context = dispatcher) {
+    fun duplicateUrlCreationRequestsCreateOnlyOnePlaylist() = runTest(dispatcher) {
         val server = playlistServer()
-        val viewModel = viewModel(openedIds = mutableListOf())
+        val viewModel = viewModel(mutableListOf())
         val source = "http://127.0.0.1:${server.address.port}/News_List.m3u"
         try {
-            viewModel.onAction(PlaylistUiAction.CreateM3UUrl(url = source))
-            viewModel.onAction(PlaylistUiAction.CreateM3UUrl(url = source))
+            viewModel.onAction(PlaylistUiAction.CreateM3UUrl(source))
+            viewModel.onAction(PlaylistUiAction.CreateM3UUrl(source))
             advanceUntilIdle()
 
-            assertEquals(
-                1,
-                repository.createM3UCalls.size,
-            )
+            assertEquals(1, repository.createM3UCalls.size)
         } finally {
             server.stop(0)
         }
@@ -138,11 +135,8 @@ class PlaylistListViewModelTest {
 
     private fun viewModel(openedIds: MutableList<Long>) = PlaylistListViewModel(
         playlistRepository = repository,
-        m3uParser = M3UParser(
-            context = context,
-            Dispatchers.Unconfined,
-        ),
-        documentPermissionManager = M3UDocumentPermissionManager(context = context),
+        m3uParser = M3UParser(context, Dispatchers.Unconfined),
+        documentPermissionManager = M3UDocumentPermissionManager(context),
         mediaSynchronizer = FakeMediaSynchronizer,
         systemService = systemService,
         output = PlaylistListViewModel.Output(
@@ -151,20 +145,15 @@ class PlaylistListViewModelTest {
         ),
     )
 
-    private fun playlistServer(): HttpServer = HttpServer.create(
-        InetSocketAddress(0),
-        0,
-    ).apply {
-        createContext("/News_List.m3u") { exchange ->
-            val body = "https://media.example/live".encodeToByteArray()
-            exchange.sendResponseHeaders(
-                200,
-                body.size.toLong(),
-            )
-            exchange.responseBody.use { it.write(body) }
+    private fun playlistServer(): HttpServer =
+        HttpServer.create(InetSocketAddress(0), 0).apply {
+            createContext("/News_List.m3u") { exchange ->
+                val body = "https://media.example/live".encodeToByteArray()
+                exchange.sendResponseHeaders(200, body.size.toLong())
+                exchange.responseBody.use { it.write(body) }
+            }
+            start()
         }
-        start()
-    }
 
     private object FakeMediaSynchronizer : MediaSynchronizer {
         override suspend fun refresh(path: String?): Boolean = true

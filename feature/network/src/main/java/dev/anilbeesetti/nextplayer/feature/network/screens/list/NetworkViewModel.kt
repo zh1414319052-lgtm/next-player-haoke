@@ -38,18 +38,13 @@ class NetworkViewModel(
         val openStream: (Uri) -> Unit,
     )
 
-    private val stateInternal = MutableStateFlow(value = NetworkUiState())
+    private val stateInternal = MutableStateFlow(NetworkUiState())
     override val state: StateFlow<NetworkUiState> = stateInternal.asStateFlow()
 
     init {
         viewModelScope.launch {
             repository.getConnections().collect { connections ->
-                stateInternal.update {
-                    it.copy(
-                        connections = connections,
-                        isLoading = false,
-                    )
-                }
+                stateInternal.update { it.copy(connections = connections, isLoading = false) }
             }
         }
     }
@@ -61,6 +56,7 @@ class NetworkViewModel(
             is NetworkAction.OpenConnection -> output.openConnection(action.id)
             is NetworkAction.OpenSettings -> output.openSettings()
             is NetworkAction.OpenStream -> output.openStream(action.uri)
+
             is NetworkAction.DeleteConnection -> deleteConnection(action.id)
         }
     }
@@ -68,11 +64,7 @@ class NetworkViewModel(
     private fun deleteConnection(id: Long) {
         viewModelScope.launch {
             try {
-                deleteConnectionAndCleanup(
-                    id = id,
-                    repository = repository,
-                    sshKeyStore = sshKeyStore,
-                )
+                deleteConnectionAndCleanup(id, repository, sshKeyStore)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
@@ -97,9 +89,9 @@ internal suspend fun deleteConnectionAndCleanup(
     repository: NetworkConnectionRepository,
     sshKeyStore: SshKeyStore,
 ) {
-    val connection = repository.getConnection(id = id) ?: return
-    withContext(context = NonCancellable) {
-        repository.delete(id = id)
+    val connection = repository.getConnection(id) ?: return
+    withContext(NonCancellable) {
+        repository.delete(id)
         if (
             connection.authentication == NetworkAuthentication.SSH_KEY &&
             connection.privateKeyFileName.isNotBlank()
@@ -108,10 +100,10 @@ internal suspend fun deleteConnectionAndCleanup(
                 sshKeyStore.delete(connection.privateKeyFileName)
             } catch (keyFailure: Throwable) {
                 try {
-                    repository.upsert(connection = connection)
+                    repository.upsert(connection)
                 } catch (rollbackFailure: Throwable) {
                     if (rollbackFailure !== keyFailure) {
-                        keyFailure.addSuppressed(exception = rollbackFailure)
+                        keyFailure.addSuppressed(rollbackFailure)
                     }
                 }
                 throw keyFailure

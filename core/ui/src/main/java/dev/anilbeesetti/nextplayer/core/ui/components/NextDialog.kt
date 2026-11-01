@@ -25,6 +25,9 @@ fun NextDialog(
 
     AlertDialog(
         title = title,
+        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = androidx.compose.material3.MaterialTheme.shapes.extraLarge,
+        tonalElevation = 0.dp,
         text = { Column { content() } },
         modifier = modifier
             .widthIn(max = configuration.screenWidthDp.dp - NextDialogDefaults.dialogMargin * 2),

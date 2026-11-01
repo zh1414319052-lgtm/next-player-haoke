@@ -14,7 +14,7 @@ import org.koin.core.parameter.parametersOf
 object GesturePreferencesRoute : NavKey
 
 fun NavBackStack<NavKey>.navigateToGesturePreferences() {
-    add(element = GesturePreferencesRoute)
+    add(GesturePreferencesRoute)
 }
 
 fun EntryProviderScope<NavKey>.gesturePreferencesEntry(onNavigateUp: () -> Unit) {

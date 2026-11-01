@@ -76,7 +76,6 @@ import dev.anilbeesetti.nextplayer.core.model.Sort
 import dev.anilbeesetti.nextplayer.core.model.Video
 import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.core.ui.components.CancelButton
-import dev.anilbeesetti.nextplayer.core.ui.components.MediaQuickSettingsDialog
 import dev.anilbeesetti.nextplayer.core.ui.components.NextDialog
 import dev.anilbeesetti.nextplayer.core.ui.components.NextTopAppBar
 import dev.anilbeesetti.nextplayer.core.ui.components.rememberRestorableFocusState
@@ -101,15 +100,14 @@ import dev.anilbeesetti.nextplayer.feature.videopicker.state.SelectionItem
 import dev.anilbeesetti.nextplayer.feature.videopicker.state.rememberSelectionManager
 
 @Composable
-fun VaultScreen(viewModel: VaultViewModel) {
+fun VaultScreen(
+    viewModel: VaultViewModel,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(
-        key1 = lifecycleOwner,
-        key2 = viewModel,
-    ) {
+    LaunchedEffect(lifecycleOwner, viewModel) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.events.collect { event ->
                 when (event) {
@@ -119,11 +117,7 @@ fun VaultScreen(viewModel: VaultViewModel) {
                             event.count,
                             event.count,
                         )
-                        Toast.makeText(
-                            context,
-                            message,
-                            Toast.LENGTH_LONG,
-                        ).show()
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -137,7 +131,10 @@ fun VaultScreen(viewModel: VaultViewModel) {
 }
 
 @Composable
-internal fun VaultScreenContent(state: VaultUiState, onAction: (VaultAction) -> Unit) {
+internal fun VaultScreenContent(
+    state: VaultUiState,
+    onAction: (VaultAction) -> Unit,
+) {
     when (state.stage) {
         VaultStage.LOADING -> CenterCircularProgressBar()
 
@@ -146,7 +143,7 @@ internal fun VaultScreenContent(state: VaultUiState, onAction: (VaultAction) -> 
             description = stringResource(R.string.enter_vault_pin_description),
             pinErrorCount = state.pinErrorCount,
             errorMessage = stringResource(R.string.incorrect_pin),
-            onSubmit = { onAction(VaultAction.SubmitUnlockPin(pin = it)) },
+            onSubmit = { onAction(VaultAction.SubmitUnlockPin(it)) },
             onBiometricAuthenticated = if (state.biometricEnabled) {
                 { onAction(VaultAction.BiometricAuthenticated) }
             } else {
@@ -159,7 +156,7 @@ internal fun VaultScreenContent(state: VaultUiState, onAction: (VaultAction) -> 
             title = stringResource(R.string.set_vault_pin),
             description = stringResource(R.string.set_vault_pin_description),
             pinErrorCount = state.setPinGeneration,
-            onSubmit = { onAction(VaultAction.SubmitNewPin(pin = it)) },
+            onSubmit = { onAction(VaultAction.SubmitNewPin(it)) },
             onNavigateUp = { onAction(VaultAction.NavigateUp) },
         )
 
@@ -168,12 +165,12 @@ internal fun VaultScreenContent(state: VaultUiState, onAction: (VaultAction) -> 
             description = stringResource(R.string.confirm_vault_pin_description),
             pinErrorCount = state.pinErrorCount,
             errorMessage = stringResource(R.string.pins_do_not_match),
-            onSubmit = { onAction(VaultAction.SubmitPinConfirmation(pin = it)) },
+            onSubmit = { onAction(VaultAction.SubmitPinConfirmation(it)) },
             onNavigateUp = { onAction(VaultAction.NavigateUp) },
         )
 
         VaultStage.BIOMETRIC_SETUP -> VaultBiometricSetupDialog(
-            onComplete = { onAction(VaultAction.CompleteBiometricSetup(enabled = it)) },
+            onComplete = { onAction(VaultAction.CompleteBiometricSetup(it)) },
         )
 
         VaultStage.UNLOCKED -> VaultGalleryContent(
@@ -222,17 +219,14 @@ private fun VaultPinContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(
-                            horizontal = 24.dp,
-                            vertical = 8.dp,
-                        ),
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
                 )
             }
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         PinEntryContent(
-            modifier = Modifier.padding(paddingValues = padding),
+            modifier = Modifier.padding(padding),
             title = title,
             description = description,
             pinErrorCount = pinErrorCount,
@@ -252,9 +246,9 @@ private fun PinEntryContent(
     onSubmit: (String) -> Unit,
 ) {
     // pin resets on every wrong attempt because pinErrorCount increments each time
-    var pin by rememberSaveable(pinErrorCount) { mutableStateOf(value = "") }
+    var pin by rememberSaveable(pinErrorCount) { mutableStateOf("") }
     // showError is true whenever there has been at least one error, resets when pinErrorCount resets to 0
-    var showError by rememberSaveable(pinErrorCount) { mutableStateOf(value = pinErrorCount > 0) }
+    var showError by rememberSaveable(pinErrorCount) { mutableStateOf(pinErrorCount > 0) }
 
     val context = LocalContext.current
     val isTv = remember { context.isTelevision }
@@ -269,7 +263,7 @@ private fun PinEntryContent(
         }
     }
     val onBackspace: () -> Unit = {
-        if (pin.isNotEmpty()) pin = pin.dropLast(n = 1)
+        if (pin.isNotEmpty()) pin = pin.dropLast(1)
     }
 
     if (isTv) {
@@ -282,17 +276,14 @@ private fun PinEntryContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PinEntryHeader(
-                modifier = Modifier.weight(weight = 1f),
+                modifier = Modifier.weight(1f),
                 title = title,
                 description = description,
                 filledCount = pin.length,
                 showError = showError,
                 errorMessage = errorMessage,
             )
-            Box(
-                modifier = Modifier.weight(weight = 1f),
-                contentAlignment = Alignment.Center,
-            ) {
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 PinKeypad(
                     modifier = Modifier.widthIn(max = 360.dp),
                     onDigit = onDigit,
@@ -368,10 +359,7 @@ private fun PinEntryHeader(
             textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.size(32.dp))
-        PinDotsIndicator(
-            filledCount = filledCount,
-            error = showError,
-        )
+        PinDotsIndicator(filledCount = filledCount, error = showError)
         Spacer(modifier = Modifier.size(8.dp))
         if (showError && errorMessage.isNotEmpty()) {
             Text(
@@ -384,20 +372,20 @@ private fun PinEntryHeader(
     }
 }
 
-@OptIn(
-    ExperimentalMaterial3Api::class,
-    ExperimentalMaterial3ExpressiveApi::class,
-)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> Unit) {
+private fun VaultGalleryContent(
+    state: VaultUiState,
+    onAction: (VaultAction) -> Unit,
+) {
     val context = LocalContext.current
     val isTv = remember { context.isTelevision }
     val focusState = rememberRestorableFocusState()
     val selectionManager = rememberSelectionManager()
-    var showQuickSettings by rememberSaveable { mutableStateOf(value = false) }
-    var showSettings by rememberSaveable { mutableStateOf(value = false) }
-    var showDeleteConfirmation by rememberSaveable { mutableStateOf(value = false) }
-    var showUnhideConfirmation by rememberSaveable { mutableStateOf(value = false) }
+    var showSortMenu by rememberSaveable { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showDeleteConfirmation by rememberSaveable { mutableStateOf(false) }
+    var showUnhideConfirmation by rememberSaveable { mutableStateOf(false) }
 
     val selectedCount = selectionManager.selectionItems.size
     val totalCount = state.hiddenVideos.size
@@ -410,11 +398,7 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
         topBar = {
             NextTopAppBar(
                 title = {
-                    val titleText =
-                        stringResource(R.string.hidden_videos).takeIf {
-                            !selectionManager.isInSelectionMode
-                        }
-                            ?: ""
+                    val titleText = stringResource(R.string.hidden_videos).takeIf { !selectionManager.isInSelectionMode } ?: ""
                     Text(
                         text = titleText,
                         maxLines = 1,
@@ -426,7 +410,7 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
                     if (selectionManager.isInSelectionMode) {
                         Row(
                             modifier = Modifier
-                                .clip(shape = CircleShape)
+                                .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.secondaryContainer)
                                 .clickable { selectionManager.exitSelectionMode() }
                                 .padding(8.dp)
@@ -439,11 +423,7 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
                                 contentDescription = stringResource(id = R.string.navigate_up),
                             )
                             Text(
-                                text = stringResource(
-                                    R.string.m_n_selected,
-                                    selectedCount,
-                                    totalCount,
-                                ),
+                                text = stringResource(R.string.m_n_selected, selectedCount, totalCount),
                                 style = MaterialTheme.typography.labelLarge,
                             )
                         }
@@ -464,9 +444,7 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
                         FilledTonalIconButton(
                             onClick = {
                                 if (selectedCount != totalCount) {
-                                    state.hiddenVideos.forEach {
-                                        selectionManager.selectVideo(video = it)
-                                    }
+                                    state.hiddenVideos.forEach { selectionManager.selectVideo(it) }
                                 } else {
                                     selectionManager.clearSelection()
                                 }
@@ -474,11 +452,7 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
                             modifier = Modifier.tvFocusRing(),
                         ) {
                             Icon(
-                                imageVector = if (selectedCount != totalCount) {
-                                    NextIcons.SelectAll
-                                } else {
-                                    NextIcons.DeselectAll
-                                },
+                                imageVector = if (selectedCount != totalCount) NextIcons.SelectAll else NextIcons.DeselectAll,
                                 contentDescription = if (selectedCount != totalCount) {
                                     stringResource(R.string.select_all)
                                 } else {
@@ -488,12 +462,12 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
                         }
                     } else {
                         IconButton(
-                            onClick = { showQuickSettings = true },
+                            onClick = { showSortMenu = true },
                             modifier = Modifier.tvFocusRing(),
                         ) {
                             Icon(
                                 imageVector = NextIcons.Sensitivity,
-                                contentDescription = stringResource(R.string.quick_settings),
+                                contentDescription = stringResource(R.string.sort_by),
                             )
                         }
                         IconButton(
@@ -511,9 +485,7 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
         },
         bottomBar = {
             VaultSelectionActionsSheet(
-                show =
-                    selectionManager.isInSelectionMode &&
-                        selectionManager.selectionItems.isNotEmpty(),
+                show = selectionManager.isInSelectionMode && selectionManager.selectionItems.isNotEmpty(),
                 contentFocusRequester = focusState.requester,
                 onPlayAction = {
                     onAction(VaultAction.PlaySelected(selectionManager.selectionItems))
@@ -521,10 +493,8 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
                 },
                 onInfoAction = {
                     val selected = selectionManager.selectionItems.firstOrNull()
-                    val video = state.hiddenVideos.find {
-                        it.uriString == (selected as? SelectionItem.Video)?.uriString
-                    }
-                    if (video != null) onAction(VaultAction.ShowMediaInfo(video = video))
+                    val video = state.hiddenVideos.find { it.uriString == (selected as? SelectionItem.Video)?.uriString }
+                    if (video != null) onAction(VaultAction.ShowMediaInfo(video))
                     selectionManager.exitSelectionMode()
                 },
                 showInfoAction = selectionManager.selectionItems.size == 1,
@@ -532,31 +502,25 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
                 onDeleteAction = { showDeleteConfirmation = true },
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = padding.calculateTopPadding())
                 .padding(start = padding.calculateStartPadding(LocalLayoutDirection.current))
-                .clip(
-                    shape = RoundedCornerShape(
-                        topStart = 24.dp,
-                        topEnd = 24.dp,
-                    ),
-                )
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(MaterialTheme.colorScheme.background),
         ) {
-            val updatedPadding = padding.copy(
-                top = 0.dp,
-                start = 0.dp,
-            )
+            val updatedPadding = padding.copy(top = 0.dp, start = 0.dp)
             when {
                 state.isLoading -> {
                     Box(
-                        modifier = Modifier.fillMaxSize().padding(paddingValues = updatedPadding),
+                        modifier = Modifier.fillMaxSize().padding(updatedPadding),
                         contentAlignment = Alignment.Center,
-                    ) { CircularProgressIndicator() }
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
 
                 state.hiddenVideos.isEmpty() -> {
@@ -565,11 +529,11 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
 
                 else -> {
                     LazyVerticalGrid(
-                        modifier = Modifier.fillMaxSize().restorableFocusGroup(state = focusState),
+                        modifier = Modifier.fillMaxSize().restorableFocusGroup(focusState),
                         columns = if (state.preferences.mediaLayoutMode == MediaLayoutMode.GRID) {
                             GridCells.Adaptive(minSize = 130.dp)
                         } else {
-                            GridCells.Fixed(count = 1)
+                            GridCells.Fixed(1)
                         },
                         contentPadding = PaddingValues(
                             start = 8.dp,
@@ -582,27 +546,24 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
                             items = state.hiddenVideos,
                             key = { _, video -> video.uriString },
                         ) { _, video ->
-                            val selected = selectionManager.isVideoSelected(video = video)
+                            val selected = selectionManager.isVideoSelected(video)
                             VideoItem(
                                 modifier = Modifier
                                     .padding(2.dp)
-                                    .restorableFocusItem(
-                                        state = focusState,
-                                        video.uriString,
-                                    ),
+                                    .restorableFocusItem(focusState, video.uriString),
                                 video = video,
                                 isRecentlyPlayedVideo = false,
                                 preferences = state.preferences,
                                 selected = selected,
                                 onClick = {
                                     if (selectionManager.isInSelectionMode) {
-                                        selectionManager.toggleVideoSelection(video = video)
+                                        selectionManager.toggleVideoSelection(video)
                                     } else {
-                                        onAction(VaultAction.PlayVideo(video = video))
+                                        onAction(VaultAction.PlayVideo(video))
                                     }
                                 },
                                 onLongClick = {
-                                    selectionManager.toggleVideoSelection(video = video)
+                                    selectionManager.toggleVideoSelection(video)
                                 },
                             )
                         }
@@ -615,30 +576,18 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
     if (showSettings) {
         VaultSettingsDialog(
             biometricEnabled = state.biometricEnabled,
-            onBiometricEnabledChange = { onAction(VaultAction.SetBiometricEnabled(enabled = it)) },
+            onBiometricEnabledChange = { onAction(VaultAction.SetBiometricEnabled(it)) },
             onDismiss = { showSettings = false },
         )
     }
 
-    if (showQuickSettings) {
-        MediaQuickSettingsDialog(
-            layoutMode = state.preferences.mediaLayoutMode,
+    if (showSortMenu) {
+        VaultSortDialog(
             sort = state.sort,
-            sortOptions = listOf(
-                Sort.By.TITLE,
-                Sort.By.LENGTH,
-                Sort.By.DATE,
-                Sort.By.SIZE,
-            ),
-            dateLabel = R.string.date_hidden,
-            onDismiss = { showQuickSettings = false },
-            onConfirm = { layout, sort ->
-                onAction(
-                    VaultAction.UpdateQuickSettings(
-                        layoutMode = layout,
-                        sort = sort,
-                    ),
-                )
+            onDismiss = { showSortMenu = false },
+            onSortSelected = {
+                onAction(VaultAction.UpdateSort(it))
+                showSortMenu = false
             },
         )
     }
@@ -651,10 +600,7 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
                     text = if (selectedCount == 1) {
                         stringResource(R.string.delete_one_video_from_vault)
                     } else {
-                        stringResource(
-                            R.string.delete_videos_from_vault,
-                            selectedCount,
-                        )
+                        stringResource(R.string.delete_videos_from_vault, selectedCount)
                     },
                 )
             },
@@ -666,7 +612,9 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
                         selectionManager.exitSelectionMode()
                         showDeleteConfirmation = false
                     },
-                ) { Text(text = stringResource(R.string.delete)) }
+                ) {
+                    Text(text = stringResource(R.string.delete))
+                }
             },
             dismissButton = { CancelButton(onClick = { showDeleteConfirmation = false }) },
         )
@@ -681,10 +629,7 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
                     text = if (selectedCount == 1) {
                         stringResource(R.string.unhide_one_video_confirmation)
                     } else {
-                        stringResource(
-                            R.string.unhide_videos_confirmation,
-                            selectedCount,
-                        )
+                        stringResource(R.string.unhide_videos_confirmation, selectedCount)
                     },
                 )
             },
@@ -695,7 +640,9 @@ private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> 
                         selectionManager.exitSelectionMode()
                         showUnhideConfirmation = false
                     },
-                ) { Text(text = stringResource(R.string.unhide)) }
+                ) {
+                    Text(text = stringResource(R.string.unhide))
+                }
             },
             dismissButton = { CancelButton(onClick = { showUnhideConfirmation = false }) },
         )
@@ -714,12 +661,9 @@ private fun VaultEmptyState(contentPadding: PaddingValues) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(state = rememberScrollState())
-            .padding(paddingValues = contentPadding)
-            .padding(
-                horizontal = 24.dp,
-                vertical = 40.dp,
-            ),
+            .verticalScroll(rememberScrollState())
+            .padding(contentPadding)
+            .padding(horizontal = 24.dp, vertical = 40.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -751,6 +695,68 @@ private fun VaultEmptyState(contentPadding: PaddingValues) {
             textAlign = TextAlign.Center,
         )
     }
+}
+
+@Composable
+private fun VaultSortDialog(
+    sort: Sort,
+    onDismiss: () -> Unit,
+    onSortSelected: (Sort) -> Unit,
+) {
+    val options = listOf(
+        Sort.By.TITLE to stringResource(R.string.name),
+        Sort.By.DATE to stringResource(R.string.date_hidden),
+        Sort.By.SIZE to stringResource(R.string.size),
+        Sort.By.LENGTH to stringResource(R.string.duration),
+    )
+    NextDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(R.string.sort_by)) },
+        content = {
+            Column {
+                options.forEach { (by, label) ->
+                    val selected = sort.by == by
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.medium)
+                            .clickable {
+                                val newOrder = if (selected) {
+                                    if (sort.order == Sort.Order.ASCENDING) Sort.Order.DESCENDING else Sort.Order.ASCENDING
+                                } else {
+                                    sort.order
+                                }
+                                onSortSelected(Sort(by = by, order = newOrder))
+                            }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = if (selected) NextIcons.CheckBox else NextIcons.CheckBoxOutline,
+                            contentDescription = null,
+                            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.size(12.dp))
+                        Text(text = label)
+                        if (selected) {
+                            Spacer(modifier = Modifier.size(8.dp))
+                            Icon(
+                                imageVector = if (sort.order == Sort.Order.ASCENDING) NextIcons.ArrowUpward else NextIcons.ArrowDownward,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.done))
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -791,9 +797,9 @@ private fun VaultSelectionActionsSheet(
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         shape = shape,
                     )
-                    .clip(shape = shape)
-                    .horizontalScroll(state = rememberScrollState())
-                    .thenIf(condition = isTv) {
+                    .clip(shape)
+                    .horizontalScroll(rememberScrollState())
+                    .thenIf(isTv) {
                         focusRestorer(fallback = firstActionFocusRequester).focusGroup()
                             .focusProperties { up = contentFocusRequester }
                     }
@@ -806,9 +812,7 @@ private fun VaultSelectionActionsSheet(
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 SelectionAction(
-                    modifier = Modifier.thenIf(condition = isTv) {
-                        focusRequester(focusRequester = firstActionFocusRequester)
-                    },
+                    modifier = Modifier.thenIf(isTv) { focusRequester(firstActionFocusRequester) },
                     isTv = isTv,
                     imageVector = NextIcons.Play,
                     title = stringResource(R.string.play),
@@ -856,5 +860,9 @@ private fun VaultPinContentPreview() {
 @PreviewLightDark
 @Composable
 private fun VaultEmptyStatePreview() {
-    NextPlayerTheme { Surface { VaultEmptyState(contentPadding = PaddingValues()) } }
+    NextPlayerTheme {
+        Surface {
+            VaultEmptyState(contentPadding = PaddingValues())
+        }
+    }
 }

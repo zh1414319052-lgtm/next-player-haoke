@@ -23,13 +23,17 @@ import androidx.compose.ui.unit.dp
 import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.core.ui.components.ClickablePreferenceItem
 import dev.anilbeesetti.nextplayer.core.ui.components.NextTopAppBar
+import dev.anilbeesetti.nextplayer.core.ui.components.ListSectionTitle
 import dev.anilbeesetti.nextplayer.core.ui.components.rememberRestorableFocusState
 import dev.anilbeesetti.nextplayer.core.ui.components.restorableFocusGroup
 import dev.anilbeesetti.nextplayer.core.ui.components.restorableFocusItem
 import dev.anilbeesetti.nextplayer.core.ui.components.tvFocusDown
 import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
 
-data class SettingsOutput(val navigateUp: () -> Unit, val openSetting: (Setting) -> Unit)
+data class SettingsOutput(
+    val navigateUp: () -> Unit,
+    val openSetting: (Setting) -> Unit,
+)
 
 private sealed interface SettingsAction {
     data object NavigateUp : SettingsAction
@@ -46,13 +50,17 @@ fun SettingsScreen(output: SettingsOutput) {
     }
 }
 
-@OptIn(
-    ExperimentalMaterial3Api::class,
-    ExperimentalMaterial3ExpressiveApi::class,
-)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SettingsScreenContent(onAction: (SettingsAction) -> Unit) {
-    val settingRows = remember { SettingRow.entries }
+private fun SettingsScreenContent(
+    onAction: (SettingsAction) -> Unit,
+) {
+    val groups = remember {
+        listOf(
+            R.string.cinema_settings_playback to listOf(SettingRow.PLAYER, SettingRow.GESTURES, SettingRow.AUDIO, SettingRow.SUBTITLE),
+            R.string.cinema_settings_library to listOf(SettingRow.APPEARANCE, SettingRow.MEDIA_LIBRARY, SettingRow.GENERAL, SettingRow.ABOUT),
+        )
+    }
     val focusState = rememberRestorableFocusState()
 
     Scaffold(
@@ -72,32 +80,32 @@ private fun SettingsScreenContent(onAction: (SettingsAction) -> Unit) {
                 },
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(state = rememberScrollState())
-                .restorableFocusGroup(state = focusState)
-                .padding(paddingValues = innerPadding)
+                .restorableFocusGroup(focusState)
+                .padding(innerPadding)
                 .padding(horizontal = 16.dp)
                 .padding(vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
         ) {
-            settingRows.forEachIndexed { index, row ->
-                key(row) {
-                    ClickablePreferenceItem(
-                        modifier = Modifier.restorableFocusItem(
-                            state = focusState,
-                            row.name,
-                        ),
-                        title = stringResource(id = row.titleResId),
-                        description = stringResource(id = row.descriptionResId),
-                        icon = row.icon,
-                        onClick = { onAction(SettingsAction.OpenSetting(row.setting)) },
-                        isFirstItem = index == 0,
-                        isLastItem = index == settingRows.lastIndex,
-                    )
+            groups.forEach { (title, rows) ->
+                ListSectionTitle(text = stringResource(title))
+                rows.forEachIndexed { index, row ->
+                    key(row) {
+                        ClickablePreferenceItem(
+                            modifier = Modifier.restorableFocusItem(focusState, row.name),
+                            title = stringResource(id = row.titleResId),
+                            description = stringResource(id = row.descriptionResId),
+                            icon = row.icon,
+                            onClick = { onAction(SettingsAction.OpenSetting(row.setting)) },
+                            isFirstItem = index == 0,
+                            isLastItem = index == rows.lastIndex,
+                        )
+                    }
                 }
             }
         }

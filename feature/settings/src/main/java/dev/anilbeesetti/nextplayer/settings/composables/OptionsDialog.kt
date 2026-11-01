@@ -14,10 +14,16 @@ import dev.anilbeesetti.nextplayer.core.ui.components.NextDialog
 import dev.anilbeesetti.nextplayer.core.ui.components.tvListFocus
 
 @Composable
-fun OptionsDialog(text: String, onDismissClick: () -> Unit, options: LazyListScope.() -> Unit) {
+fun OptionsDialog(
+    text: String,
+    onDismissClick: () -> Unit,
+    options: LazyListScope.() -> Unit,
+) {
     NextDialog(
         onDismissRequest = onDismissClick,
-        title = { Text(text = text) },
+        title = {
+            Text(text = text)
+        },
         content = {
             HorizontalDivider()
             LazyColumn(
@@ -30,6 +36,6 @@ fun OptionsDialog(text: String, onDismissClick: () -> Unit, options: LazyListSco
             HorizontalDivider()
         },
         dismissButton = { CancelButton(onClick = onDismissClick) },
-        confirmButton = {},
+        confirmButton = { },
     )
 }

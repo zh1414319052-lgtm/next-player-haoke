@@ -1,134 +1,86 @@
-![Next player banner](fastlane/metadata/android/en-US/images/featureGraphic.png)
+# 下一代播放器 / Next Player · 浩科优化版
 
-# Next Player
+`next-player-haoke` 保存 **0.19.0-haoke.6（versionCode 81）** 正式版对应的修改源码。
+基于 [Anil Beesetti / Next Player](https://github.com/anilbeesetti/nextplayer) 0.19.0，保留 GPL-3.0 和原作者归属。
+这是独立维护的浩科优化版，未经上游作者背书；上游介绍保留于 [README.upstream.md](README.upstream.md)。
 
-[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/anilbeesetti/nextplayer.svg?logo=github&label=GitHub&cacheSeconds=3600)](https://github.com/anilbeesetti/nextplayer/releases/latest)
-[![Google Play](https://img.shields.io/endpoint?color=green&logo=google-play&url=https%3A%2F%2Fplay.cuzi.workers.dev%2Fplay%3Fi%3Ddev.anilbeesetti.nextplayer%26l%3DGoogle%2520Play%26m%3Dv%24version)](https://play.google.com/store/apps/details?id=dev.anilbeesetti.nextplayer)
-[![IzzyOnDroid](https://img.shields.io/endpoint?url=https://apt.izzysoft.de/fdroid/api/v1/shield/dev.anilbeesetti.nextplayer)](https://apt.izzysoft.de/fdroid/index/apk/dev.anilbeesetti.nextplayer)
-[![F-Droid](https://img.shields.io/f-droid/v/dev.anilbeesetti.nextplayer?logo=f-droid&label=F-Droid&cacheSeconds=3600)](https://f-droid.org/packages/dev.anilbeesetti.nextplayer)
-[![GitHub all releases](https://img.shields.io/github/downloads/anilbeesetti/nextplayer/total?logo=github&cacheSeconds=3600)](https://github.com/anilbeesetti/nextplayer/releases/latest)
-[![Google Play](https://img.shields.io/endpoint?color=green&logo=google-play&url=https%3A%2F%2Fplay.cuzi.workers.dev%2Fplay%3Fi%3Ddev.anilbeesetti.nextplayer%26l%3Ddownloads%26m%3D%24totalinstalls)](https://play.google.com/store/apps/details?id=dev.anilbeesetti.nextplayer)
-[![Weblate project translated](https://img.shields.io/weblate/progress/next-player?logo=weblate&logoColor=white&cacheSeconds=36000)](https://hosted.weblate.org/engage/next-player/)
+**正式版下载：[浩科工具站 https://haoke.org](https://haoke.org)**
 
-Next Player is an Android native video player written in Kotlin. It provides a simple and easy-to-use interface for users to play videos on their
-Android devices
+GitHub 用于源码维护；正式安装包请到上述网站查找“下一代播放器”。
 
-**This project is still in development and is expected to have bugs. Please report any bugs you find in
-the [Issues](https://github.com/anilbeesetti/nextplayer/issues) section.**
+## 本版改动
 
-[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80"/>](https://play.google.com/store/apps/details?id=dev.anilbeesetti.nextplayer)
-[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" height="80">](https://apt.izzysoft.de/fdroid/index/apk/dev.anilbeesetti.nextplayer)
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/dev.anilbeesetti.nextplayer/)
+- 石墨黑与青绿色影院界面，更新媒体库、续播卡片、更多、设置和播放控制栏。
+- 改善运动补偿插帧的边缘锯齿和 4K 分析缩放抗混叠，保留固定 60 帧与两倍模式。
+- 自定义片头、片尾跳过时长，各为 0–1800 整数秒；0 为不跳过该部分。支持保存、取消、关闭保留时长、片头撤销与手动回看。
+- 保留自动识别、循环和播放结束保护、音轨/字幕、网络播放及既有 DLNA 投屏能力。
+- 复用签名版本通知，关于页提供手动检查和开源许可入口。
 
-> For Github releases, you can verify the app with the SHA-256 fingerprint certificate: `D3:7C:AB:F3:67:6C:F5:82:24:FB:24:2C:8D:D2:09:12:9D:05:88:03:79:29:5F:AA:A6:D0:FB:60:7B:EC:13:1B`
+新安装默认深色影院主题；插帧和跳过默认关闭。升级保留已保存的主题与功能开关。
+插帧适用于硬件解码、1 倍速、12–30 fps、最高 3840×2160；效果和性能受 GPU 与片源影响，复杂运动仍可能有伪影，不保证全程锁定 60 帧。
+DLNA 兼容性取决于电视和局域网。
 
-## Screenshots
+设置跳过：**更多 → 设置 → 播放器 → 设置跳过时长**，保存后开启“自定义跳过片头片尾”。
+设置对所有视频生效；自定义正数时长优先于相应端自动识别。重叠或正文不足、直播及不可拖动内容受保护规则限制，循环模式保留片尾。
 
-### Phone
+## 正式包身份
 
-<div style="width:100%; display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+| 项目 | 值 |
+| --- | --- |
+| 版本 | `0.19.0-haoke.6` / `81` |
+| Application ID | `dev.anilbeesetti.nextplayer.haoke` |
+| 已交付架构 | `arm64-v8a` |
+| 系统要求 | Android 7.0+ / minSdk 24 |
+| 正式 APK 字节数 | `33127642` |
+| 正式 APK SHA-256 | `769ba39d655b3178a478ae7cfc8de11114f45ec89d22933e4cbce2cf1962cc38` |
+| 正式证书 SHA-256 | `d27867cecea4c6e041195cc87501c4663cefa6a6c6240a0fca835998a87c09f9` |
 
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width=19% alt="Home folders">](fastlane/metadata/android/en-US/images/phoneScreenshots/1.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width=19% alt="Demo folder videos">](fastlane/metadata/android/en-US/images/phoneScreenshots/2.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width=19% alt="Quick settings">](fastlane/metadata/android/en-US/images/phoneScreenshots/3.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width=19% alt="Grid view">](fastlane/metadata/android/en-US/images/phoneScreenshots/4.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.png" width=19% alt="Search results">](fastlane/metadata/android/en-US/images/phoneScreenshots/6.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7.png" width=19% alt="Add network connection">](fastlane/metadata/android/en-US/images/phoneScreenshots/7.png)
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8.png" width=19% alt="Appearance settings">](fastlane/metadata/android/en-US/images/phoneScreenshots/8.png)
-</div>
+正式版可同签名覆盖旧浩科正式版；上游版、QA 版使用不同包名和数据。
+自行构建不包含浩科正式私钥，不能用其他签名覆盖已安装的浩科正式版；请使用独立 debug/QA 包名测试。
 
-### Player UI
+## 源码与构建
 
-<div style="width:100%; display:flex; justify-content:space-between;">
+项目采用 Kotlin / Jetpack Compose，多模块源码位于 `app/`、`core/` 与 `feature/`。
+正式编译使用 JDK 21（JVM target 17）、Android SDK 37 及仓库 Gradle wrapper。
+Windows 请使用 ASCII 检出路径，避免构建工具对中文路径的兼容问题。
+在本机创建不提交的 `local.properties`，设置 `sdk.dir` 指向 Android SDK。
 
-[<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.png" width=49% alt="Phone player controls">](fastlane/metadata/android/en-US/images/phoneScreenshots/5.png)
-[<img src="fastlane/metadata/android/en-US/images/tvScreenshots/3.png" width=49% alt="TV player controls">](fastlane/metadata/android/en-US/images/tvScreenshots/3.png)
-</div>
+```powershell
+.\gradlew.bat -PhaokeTestBuildType=release :app:assembleRelease :app:testReleaseUnitTest :app:lintRelease ktlintCheck --continue --console=plain
+```
 
-### Android TV
+ARM64 未签名产物为 `app/build/outputs/apk/release/app-arm64-v8a-release-unsigned.apk`。
+Linux/macOS 使用 `./gradlew`；依赖需要正常下载环境。
+`scripts/sign_release.py` 供维护者读取既有源码外受保护签名身份；仓库不提供私钥、密码或本机凭据，普通贡献者无需正式签名身份。
 
-<div style="width:100%; display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+`app/debug.keystore` 为上游仓库原已公开的 Android 调试用身份，原样保留，仅用于 debug/QA，不是浩科正式签名。
 
-[<img src="fastlane/metadata/android/en-US/images/tvScreenshots/1.png" width=49% alt="TV home folders">](fastlane/metadata/android/en-US/images/tvScreenshots/1.png)
-[<img src="fastlane/metadata/android/en-US/images/tvScreenshots/2.png" width=49% alt="TV demo folder videos">](fastlane/metadata/android/en-US/images/tvScreenshots/2.png)
-[<img src="fastlane/metadata/android/en-US/images/tvScreenshots/4.png" width=49% alt="TV appearance settings">](fastlane/metadata/android/en-US/images/tvScreenshots/4.png)
-</div>
+## 验证范围
 
-## Player intent API
+- 正式 Release 单元测试 63 项通过，Kotlin 格式检查通过；Release Lint 0 错误、35 项既有警告。
+- 一加 PKG110 / Android 16：17 项不同功能用例通过，覆盖 GPU 图像/时序/回压、同签名升级保留数据、首选语言、签名 feed、原生设置交互及 4K HDR 实际播放。
+- 发布后再次验证正式版接受当前版本的签名更新信息。
+- 此前影院 UI QA 的播放器 111 项及相关布局测试已通过，不计作正式阶段重新执行。
+- 未覆盖所有机型、完整 15 分钟连续播放、真实电视 DLNA、平板分屏、极端字号、所有字幕格式或 16KB 原生页设备。
 
-Next Player supports MX Player-compatible VIEW intents, with additional playback
-speed and direct background-play options. See the [Player intent API reference](PLAYER_API.md)
-for integration examples, supported extras, URI permissions, playback results,
-and compatibility details.
+测试视频副本和辅助包已清理。仓库不包含影视视频、用户媒体库、测试数据库或设备日志。
+设计基准见 [docs/design/CINEMA-UI.md](docs/design/CINEMA-UI.md)，版本身份见 [docs/HAOKE_HANDOFF.json](docs/HAOKE_HANDOFF.json)。
 
-## Supported formats
+## 更新通知与隐私
 
-- **Video**: H.263, H.264 AVC (Baseline Profile; Main Profile on Android 6+), H.265 HEVC, MPEG-4 SP, VP8, VP9, AV1
-    - Support depends on Android device
-- **Audio**: Vorbis, Opus, FLAC, ALAC, PCM/WAVE (μ-law, A-law), MP1, MP2, MP3, AMR (NB, WB), AAC (LC, ELD, HE; xHE on Android 9+), AC-3, E-AC-3, DTS,
-  DTS-HD, TrueHD
-    - Support provided by ExoPlayer FFmpeg extension
-- **Subtitles**: SRT, SSA, ASS, TTML, VTT, DVB
-    - SSA/ASS has limited styling support see [this issue](https://github.com/google/ExoPlayer/issues/8435)
+沿用 `dev.anilbeesetti.nextplayer.haoke / stable` 签名版本通知。
+客户端在前台空闲媒体库或用户手动检查时验证签名、身份、有效期、版本和兼容性；播放及后台状态会取消检查。
+服务会收到常规请求/IP 元数据，不上传视频内容、媒体库列表或设备标识。本版没有新增遥测、后台轮询或远程弹窗。
 
-## Features
+## 许可与归属
 
-- Native Android app with simple and easy-to-use interface
-- Completely free and open source and without any ads or excessive permissions
-- Software decoders for h264 and hevc
-- Audio/Subtitle track selection
-- Vertical swipe to change brightness (left) / volume (right)
-- Horizontal swipe to seek through video
-- [Material 3 (You)](https://m3.material.io/) support
-- Media picker with tree, folder and file view modes
-- Play videos from url
-- Play videos from storage access framework (Android Document picker)
-- Control playback speed
-- External Subtitle support
-- Zoom gesture
-- Picture-in-picture mode
-- Background playback
-- Android TV version
-- Search Functionality
-- Subtitle delay
-- Network storage support (SMB/FTP/SFTP/WebDAV)
+沿用 [GNU GPL v3.0](LICENSE)。分发修改安装包时须满足对应源码及许可保留要求。
+原作者、贡献者和第三方库归属保留于源码、上游说明和应用内许可页。
+Noto Sans SC 字体使用 [SIL OFL 1.1](core/ui/src/main/assets/licenses/Noto-Sans-SC-OFL.txt)，允许商用和再分发。
 
-## Planned Features
+## English
 
-- External Audio support
-- Online subtitles download
-
-## Contributing
-
-Contributions are welcome!
-
-### Developer documentation
-
-- [Runtime decoder switching](feature/player/DECODER_SWITCHING.md)
-
-### Translating
-
-You can help translate Next Player on [Hosted Weblate](https://hosted.weblate.org/engage/next-player/).
-
-[![Translate status](https://hosted.weblate.org/widgets/next-player/-/multi-auto.svg)](https://hosted.weblate.org/engage/next-player/)
-
-## Credits
-
-### Open Source Projects
-
-- [Findroid](https://github.com/jarnedemeulemeester/findroid)
-- [Just (Video) Player](https://github.com/moneytoo/Player)
-- [LibreTube](https://github.com/libre-tube/LibreTube)
-- [ReadYou](https://github.com/Ashinch/ReadYou)
-- [Seal](https://github.com/JunkFood02/Seal)
-- ...
-
-### Special Thanks
-
-[<img src="https://hosted.weblate.org/widgets/next-player/-/287x66-white.png"  width="200"/>](https://hosted.weblate.org/engage/next-player/)
-
-Thanks to **Weblate** for providing free hosting for the project.
-
-## License
-
-Next Player is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for more information.
+Corresponding modified source for Next Player Haoke edition **0.19.0-haoke.6 (81)**, based on Anil Beesetti's Next Player 0.19.0, under GPL-3.0.
+Includes a dark cinema UI, improved interpolation edge anti-aliasing and configurable intro/outro skipping.
+Downloads: **[https://haoke.org](https://haoke.org)**.
+The upstream project and this independent edition use separate application/signing identities. Release keys, credentials, local SDK paths and user media are not included.

@@ -2,6 +2,8 @@ package dev.anilbeesetti.nextplayer.core.media.network.datasource
 
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
+import dev.anilbeesetti.nextplayer.core.common.Logger
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
@@ -16,12 +18,14 @@ import org.koin.core.annotation.Single
  */
 @UnstableApi
 @Single
-class NextDataSourceFactory(private val context: Context, private val sessions: NetworkSessions) :
-    DataSource.Factory {
+class NextDataSourceFactory(
+    private val context: Context,
+    private val sessions: NetworkSessions,
+) : DataSource.Factory {
 
     override fun createDataSource(): DataSource = SchemeDispatchingDataSource(
         default = DefaultDataSource.Factory(context).createDataSource(),
-        network = NetworkDataSource(sessions = sessions),
+        network = NetworkDataSource(sessions),
     )
 
     /** Disconnects the network client held for playback. Call when the player is released. */
@@ -39,19 +43,37 @@ private class SchemeDispatchingDataSource(
 ) : DataSource {
 
     private var delegate: DataSource? = null
+    private val localReadAhead = LocalReadAheadDataSource(default)
+    private var openedAt = 0L
+    private var bytesRead = 0L
+    private var nextReport = 256 * 1024L
 
     override fun open(dataSpec: DataSpec): Long {
-        val target = if (NetworkUri.isNetworkUri(dataSpec.uri)) network else default
+        val target = when {
+            NetworkUri.isNetworkUri(dataSpec.uri) -> network
+            dataSpec.uri.scheme in listOf(null, "file", "content", "android.resource", "asset") -> localReadAhead
+            else -> default
+        }
         delegate = target
-        return target.open(dataSpec)
+        bytesRead = 0
+        nextReport = 256 * 1024L
+        openedAt = SystemClock.elapsedRealtime()
+        val length = target.open(dataSpec)
+        Logger.logInfo("PlaybackIO", "Open scheme=${dataSpec.uri.scheme} position=${dataSpec.position} length=$length tookMs=${SystemClock.elapsedRealtime() - openedAt}")
+        return length
     }
 
-    override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
-        checkNotNull(value = delegate) { "read() before open()" }.read(
-            buffer,
-            offset,
-            length,
-        )
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+        val count = checkNotNull(delegate) { "read() before open()" }.read(buffer, offset, length)
+        if (count > 0) {
+            bytesRead += count
+            if (bytesRead >= nextReport) {
+                Logger.logInfo("PlaybackIO", "Read bytes=$bytesRead elapsedMs=${SystemClock.elapsedRealtime() - openedAt}")
+                nextReport = if (nextReport < 16 * 1024 * 1024) 16 * 1024 * 1024 else nextReport * 2
+            }
+        }
+        return count
+    }
 
     override fun getUri(): Uri? = delegate?.uri
 

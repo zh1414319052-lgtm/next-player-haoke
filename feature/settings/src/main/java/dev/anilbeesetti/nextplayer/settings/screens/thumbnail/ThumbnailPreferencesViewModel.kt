@@ -23,10 +23,12 @@ class ThumbnailPreferencesViewModel(
     @InjectedParam internal var output: Output,
 ) : MviViewModel<ThumbnailPreferencesUiState, ThumbnailPreferencesEvent>() {
 
-    data class Output(val navigateUp: () -> Unit)
+    data class Output(
+        val navigateUp: () -> Unit,
+    )
 
     private val stateInternal = MutableStateFlow(
-        value = ThumbnailPreferencesUiState(
+        ThumbnailPreferencesUiState(
             preferences = preferencesRepository.applicationPreferences.value,
         ),
     )
@@ -43,6 +45,7 @@ class ThumbnailPreferencesViewModel(
     override fun onAction(action: ThumbnailPreferencesEvent) {
         when (action) {
             is ThumbnailPreferencesEvent.NavigateUp -> output.navigateUp()
+
             is ThumbnailPreferencesEvent.UpdateStrategy -> updateStrategy(action.strategy)
             is ThumbnailPreferencesEvent.UpdateFramePosition -> updateFramePosition(action.position)
         }

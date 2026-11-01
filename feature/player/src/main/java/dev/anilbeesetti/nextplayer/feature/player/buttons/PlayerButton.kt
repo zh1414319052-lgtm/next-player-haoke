@@ -1,6 +1,7 @@
 package dev.anilbeesetti.nextplayer.feature.player.buttons
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -31,9 +32,9 @@ import androidx.compose.ui.unit.dp
 import dev.anilbeesetti.nextplayer.core.common.extensions.isTelevision
 import dev.anilbeesetti.nextplayer.core.ui.components.tvFocusRing
 import dev.anilbeesetti.nextplayer.feature.player.LocalUseMaterialYouControls
-import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlin.time.Duration.Companion.milliseconds
 
 val PlayerButtonBlackAlpha = Color.Black.copy(alpha = 0.3f)
 
@@ -54,7 +55,7 @@ fun PlayerButton(
     val context = LocalContext.current
     val isTv = remember { context.isTelevision }
 
-    LaunchedEffect(key1 = interactionSource) {
+    LaunchedEffect(interactionSource) {
         var isLongPressClicked = false
         interactionSource.interactions.collectLatest { interaction ->
             when (interaction) {
@@ -95,34 +96,29 @@ fun PlayerButton(
                 pressedAlpha = 0.5f,
                 focusedAlpha = 0.5f,
                 draggedAlpha = 0.5f,
-                hoveredAlpha = 0.5f,
-            ),
+                hoveredAlpha = 0.5f
+            )
         )
     }
 
     CompositionLocalProvider(
-        LocalContentColor provides if (enabled) {
-            colors.contentColor
-        } else {
-            colors.disabledContentColor
-        },
-        LocalRippleConfiguration provides rippleConfiguration,
+        LocalContentColor provides if (enabled) colors.contentColor else colors.disabledContentColor,
+        LocalRippleConfiguration provides rippleConfiguration
     ) {
         Box(
             modifier = modifier
-                .clip(shape = CircleShape)
-                .background(
-                    color = if (enabled) colors.containerColor else colors.disabledContainerColor,
-                )
+                .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                .clip(CircleShape)
+                .background(if (enabled) colors.containerColor else colors.disabledContainerColor)
                 .clickable(
                     interactionSource = interactionSource,
                     enabled = enabled,
                     onClick = {},
                 )
-                .padding(paddingValues = contentPadding)
-                .tvFocusRing(isTv = isTv),
+                .padding(contentPadding)
+                .tvFocusRing(isTv),
             contentAlignment = Alignment.Center,
-            content = content,
+            content = content
         )
     }
 }

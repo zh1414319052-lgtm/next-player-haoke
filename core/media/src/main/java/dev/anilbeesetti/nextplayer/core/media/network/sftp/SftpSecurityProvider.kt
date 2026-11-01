@@ -11,11 +11,11 @@ internal object SftpSecurityProvider {
     @Synchronized
     fun install() {
         val existingProvider = Security.getProvider(NAME)
-        check(
-            value = existingProvider == null || existingProvider is DelegatingBouncyCastleProvider,
-        ) { "Refusing unrelated $NAME security provider" }
+        check(existingProvider == null || existingProvider is DelegatingBouncyCastleProvider) {
+            "Refusing unrelated $NAME security provider"
+        }
         if (existingProvider == null) {
-            check(value = Security.addProvider(DelegatingBouncyCastleProvider()) > 0) {
+            check(Security.addProvider(DelegatingBouncyCastleProvider()) > 0) {
                 "Unable to install $NAME security provider"
             }
         }
@@ -23,12 +23,7 @@ internal object SftpSecurityProvider {
     }
 
     @Suppress("DEPRECATION")
-    private class DelegatingBouncyCastleProvider :
-        Provider(
-            NAME,
-            VERSION,
-            DESCRIPTION,
-        ) {
+    private class DelegatingBouncyCastleProvider : Provider(NAME, VERSION, DESCRIPTION) {
         init {
             putAll(BouncyCastleProvider())
         }

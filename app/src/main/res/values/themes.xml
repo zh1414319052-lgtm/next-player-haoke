@@ -8,4 +8,8 @@
     </style>
 
     <style name="Theme.NextPlayer" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar" />
+    <style name="Theme.NextPlayer.UpdateDialog" parent="Theme.NextPlayer">
+        <item name="android:fontFamily">@font/noto_sans_sc</item>
+        <item name="fontFamily">@font/noto_sans_sc</item>
+    </style>
 </resources>

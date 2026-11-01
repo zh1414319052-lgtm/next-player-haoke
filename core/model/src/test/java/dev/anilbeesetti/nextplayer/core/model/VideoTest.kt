@@ -18,10 +18,7 @@ class VideoTest {
             playbackPosition = -1L,
         )
 
-        assertEquals(
-            1f,
-            video.playedPercentage,
-        )
+        assertEquals(1f, video.playedPercentage)
     }
 
     @Test
@@ -68,11 +65,6 @@ class VideoTest {
     fun zeroThresholdDisablesNewBadge() {
         val video = Video.sample.copy(dateAdded = now / 1000L)
 
-        assertFalse(
-            video.isNew(
-                nowMillis = now,
-                thresholdDays = 0,
-            ),
-        )
+        assertFalse(video.isNew(nowMillis = now, thresholdDays = 0))
     }
 }

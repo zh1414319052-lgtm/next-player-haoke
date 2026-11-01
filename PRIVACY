@@ -1,3 +1,25 @@
+Haoke community build addendum — 2026-10-27
+
+This addendum applies to dev.anilbeesetti.nextplayer.haoke. The upstream policy
+below describes the original Next Player; this modified build additionally checks
+https://www.haoke.org/api/client-updates/v1/dev.anilbeesetti.nextplayer.haoke/stable
+from the idle foreground library or a manual About action. The request identifies
+only the product/channel through its URL. The server receives normal HTTP/IP
+metadata. Video contents, file lists, accounts and device identifiers are not sent.
+Signature, installed version/certificate and Android compatibility checks are local.
+No telemetry, recurring background task, new account or installer permission is added.
+The update request and bounded retries are cancelled over playback, competing routes,
+modal operations and backgrounding. Ignore/Later/acknowledgement preferences and
+rollback checkpoints are stored locally. Opening a version page or Haoke Tools is
+an explicit user action in the external browser. Interpolation runs on the device
+and does not alter the source media file.
+
+浩科版补充：空闲媒体库及关于页手动检查会连接 haoke.org，服务器可见常规
+HTTP/IP 信息；不上传视频、文件列表、账号或设备标识。插帧在本机运行，
+不改动原视频。不新增遥测、后台轮询、账号或安装权限。提醒选择保存在本机。
+
+Original upstream policy (retained verbatim):
+
 This privacy policy pertains the Next Player app.
 
 Next Player does not collect or access any personal information. No identifying information or user data of any kind is made available to third-parties.

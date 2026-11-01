@@ -24,11 +24,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.rememberProgressStateWithTickInterval
@@ -46,13 +46,28 @@ import dev.anilbeesetti.nextplayer.feature.player.state.rememberPlayerKeyInputSt
 import dev.anilbeesetti.nextplayer.feature.player.ui.DpadSeekIndicator
 import dev.anilbeesetti.nextplayer.feature.player.ui.OverlayShowView
 import dev.anilbeesetti.nextplayer.feature.player.ui.OverlayView
+import dev.anilbeesetti.nextplayer.core.database.entities.DetectedSegmentEntity
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.res.stringResource
+import dev.anilbeesetti.nextplayer.core.ui.R
+import dev.anilbeesetti.nextplayer.feature.player.service.undoIntroOutroSkip
 import dev.anilbeesetti.nextplayer.feature.player.ui.PlayerGestureIndicators
+import dev.anilbeesetti.nextplayer.core.cast.model.DlnaDevice
+import dev.anilbeesetti.nextplayer.feature.player.ui.CastDeviceSheet
+import kotlinx.coroutines.flow.Flow
+import dev.anilbeesetti.nextplayer.feature.player.ui.controls.SkipUndoPill
+import androidx.media3.session.MediaController
+import kotlinx.coroutines.delay
+import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
 
 /** Controls and overlays shared by live playback and the previewable content. */
 @OptIn(UnstableApi::class)
 @Composable
 internal fun MediaPlayerControls(
+    viewModel: PlayerViewModel?,
     player: Player,
     state: PlayerUiState,
     onAction: (PlayerAction) -> Unit,
@@ -63,23 +78,19 @@ internal fun MediaPlayerControls(
     isPipSupported: Boolean,
     onPictureInPictureClick: () -> Unit,
     modifier: Modifier = Modifier,
-    dpadUpDown: Int? = null,
+    onBottomControlsHeightChanged: (Int) -> Unit = {},
 ) {
     val playerPreferences = state.playerPreferences
-    val metadataState = rememberMetadataState(player = player)
-    val mediaPresentationState = rememberMediaPresentationState(player = player)
-    val progressState = rememberProgressStateWithTickInterval(player = player)
-    val chaptersState = rememberChaptersState(
-        player = player,
-        progressState = progressState,
-    )
+    val metadataState = rememberMetadataState(player)
+    val mediaPresentationState = rememberMediaPresentationState(player)
+    val progressState = rememberProgressStateWithTickInterval(player)
+    val chaptersState = rememberChaptersState(player, progressState)
     val keyInputState = rememberPlayerKeyInputState(
         player = player,
         controls = controlsVisibilityState,
         seekIncrementMs = playerPreferences.seekIncrement.seconds.inWholeMilliseconds,
-        dpadUpDown = dpadUpDown,
     )
-    var overlayView by remember { mutableStateOf<OverlayView?>(value = null) }
+    var overlayView by remember { mutableStateOf<OverlayView?>(null) }
     LaunchedEffect(metadataState.mediaId) {
         if (overlayView == OverlayView.CHAPTERS) overlayView = null
     }
@@ -91,28 +102,21 @@ internal fun MediaPlayerControls(
 
     val context = LocalContext.current
     val isTv = remember { context.isTelevision }
-    val handleDpadKeys = isTv || dpadUpDown != null
     val rootFocusRequester = remember { FocusRequester() }
     val middleControlsFocusRequester = remember { FocusRequester() }
     val unlockFocusRequester = remember { FocusRequester() }
-    var isMiddleControlsFocused by remember { mutableStateOf(value = false) }
-    var isUnlockFocused by remember { mutableStateOf(value = false) }
-    if (handleDpadKeys) {
-        LaunchedEffect(
-            controlsVisibilityState.controlsVisible,
-            controlsVisibilityState.controlsLocked,
-            key3 = overlayView,
-        ) {
+    var isMiddleControlsFocused by remember { mutableStateOf(false) }
+    var isUnlockFocused by remember { mutableStateOf(false) }
+    if (isTv) {
+        LaunchedEffect(controlsVisibilityState.controlsVisible, controlsVisibilityState.controlsLocked, overlayView) {
             if (overlayView != null) return@LaunchedEffect
-            if (!isTv || !controlsVisibilityState.controlsVisible) {
+            if (!controlsVisibilityState.controlsVisible) {
                 runCatching { rootFocusRequester.requestFocus() }
                 return@LaunchedEffect
             }
             val locked = controlsVisibilityState.controlsLocked
             val target = if (locked) unlockFocusRequester else middleControlsFocusRequester
-            target.requestFocusUntilLanded(attempts = 20) {
-                if (locked) isUnlockFocused else isMiddleControlsFocused
-            }
+            target.requestFocusUntilLanded(attempts = 20) { if (locked) isUnlockFocused else isMiddleControlsFocused }
         }
     }
 
@@ -123,34 +127,30 @@ internal fun MediaPlayerControls(
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .thenIf(condition = handleDpadKeys) {
-                    focusRequester(focusRequester = rootFocusRequester)
+                .thenIf(isTv) {
+                    focusRequester(rootFocusRequester)
                         .focusable()
                         .onPreviewKeyEvent { keyEvent ->
-                            if (overlayView != null ||
-                                (
-                                    !isTv && keyEvent.key != Key.DirectionUp &&
-                                        keyEvent.key != Key.DirectionDown
-                                    )
-                            ) {
-                                false
-                            } else {
-                                keyInputState.onKeyEvent(keyEvent = keyEvent)
-                            }
+                            if (overlayView != null) false else keyInputState.onKeyEvent(keyEvent)
                         }
                 },
         ) {
             AnimatedVisibility(
-                visible =
-                    controlsVisibilityState.controlsVisible &&
-                        !controlsVisibilityState.controlsLocked,
+                visible = controlsVisibilityState.controlsVisible && !controlsVisibilityState.controlsLocked,
                 enter = fadeIn(),
                 exit = fadeOut(),
             ) {
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f)),
+                        .background(
+                            Brush.verticalGradient(
+                                0f to Color.Black.copy(alpha = 0.62f),
+                                0.28f to Color.Transparent,
+                                0.65f to Color.Transparent,
+                                1f to Color.Black.copy(alpha = 0.72f),
+                            ),
+                        ),
                 )
             }
             if (mediaPresentationState.isBuffering) {
@@ -160,23 +160,70 @@ internal fun MediaPlayerControls(
                         .size(72.dp),
                 )
             }
-            PlayerGestureIndicators(tapGestureState = tapGestureState)
+            state.skipUndoKind?.takeIf { state.skipUndoToken > 0 && state.skipUndoExpireAt > System.currentTimeMillis() }?.let { skipKind ->
+                val undoScope = rememberCoroutineScope()
+                val labelRes = if (skipKind == DetectedSegmentEntity.KIND_INTRO) {
+                    R.string.skip_intro
+                } else {
+                    R.string.skip_outro
+                }
+                SkipUndoPill(
+                    label = stringResource(R.string.intro_outro_skipped_undo, stringResource(labelRes)),
+                    undoText = stringResource(R.string.undo),
+                    onUndo = {
+                        undoScope.launch {
+                            (player as? MediaController)?.undoIntroOutroSkip(state.skipUndoToken)
+                            onAction(PlayerAction.UpdateSkipUndo(null, 0L, 0L))
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 24.dp, bottom = 132.dp),
+                )
+                LaunchedEffect(state.skipUndoExpireAt) {
+                    val remaining = state.skipUndoExpireAt - System.currentTimeMillis()
+                    if (remaining > 0) {
+                        delay(remaining)
+                        onAction(PlayerAction.UpdateSkipUndo(null, 0L, 0L))
+                    }
+                }
+            }
+            PlayerGestureIndicators(tapGestureState)
             DpadSeekIndicator(
                 visible = keyInputState.isSeeking && keyInputState.seekOffsetMs != 0L,
                 offsetMs = keyInputState.seekOffsetMs,
                 positionMs = keyInputState.seekPositionMs,
             )
 
+            var showCastSheet by remember { mutableStateOf(false) }
+            val castActive = state.castState.isActive
+            LaunchedEffect(castActive) {
+                // Casting moves playback to the TV; keep the local session parked.
+                if (castActive) player.pause()
+            }
+            if (showCastSheet && viewModel != null) {
+                CastDeviceSheet(
+                    viewModel = viewModel,
+                    castUri = player.currentMediaItem?.mediaId.orEmpty(),
+                    castTitle = metadataState.title.orEmpty().ifEmpty {
+                        player.currentMediaItem?.mediaId?.substringAfterLast('/') ?: ""
+                    },
+                    castDurationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0L,
+                    onDismiss = { showCastSheet = false },
+                )
+            }
+
             if (controlsVisibilityState.controlsVisible && controlsVisibilityState.controlsLocked) {
                 PlayerLockedControls(
                     onUnlockControls = controlsVisibilityState::unlockControls,
-                    unlockButtonModifier = Modifier.thenIf(condition = isTv) {
-                        focusRequester(focusRequester = unlockFocusRequester)
+                    unlockButtonModifier = Modifier.thenIf(isTv) {
+                        focusRequester(unlockFocusRequester)
                             .onFocusChanged { isUnlockFocused = it.hasFocus }
                     },
                 )
             } else {
                 PlayerControls(
+                    onBottomControlsHeightChanged = onBottomControlsHeightChanged,
                     player = player,
                     title = metadataState.title.orEmpty(),
                     playerPreferences = playerPreferences,
@@ -192,8 +239,16 @@ internal fun MediaPlayerControls(
                     onPlayInBackgroundClick = { onAction(PlayerAction.PlayInBackground) },
                     onToggleTimeDisplay = { onAction(PlayerAction.ToggleTimeDisplay) },
                     onPictureInPictureClick = onPictureInPictureClick,
-                    middleControlsModifier = Modifier.thenIf(condition = isTv) {
-                        focusRequester(focusRequester = middleControlsFocusRequester)
+                    castState = state.castState,
+                    onCastClick = {
+                        controlsVisibilityState.showControls()
+                        showCastSheet = true
+                    },
+                    onCastPlayPause = { onAction(PlayerAction.CastTogglePlayPause) },
+                    onCastSeek = { onAction(PlayerAction.CastSeekTo(it)) },
+                    onCastStop = { onAction(PlayerAction.CastStop) },
+                    middleControlsModifier = Modifier.thenIf(isTv) {
+                        focusRequester(middleControlsFocusRequester)
                             .onFocusChanged { isMiddleControlsFocused = it.hasFocus }
                     },
                 )
@@ -215,19 +270,12 @@ internal fun MediaPlayerControls(
                 audioDecoderMode = state.decoderServiceState.audioMode,
                 videoContentScale = videoZoomAndContentScaleState.videoContentScale,
                 onDismiss = { overlayView = null },
-                onVideoDecoderModeSelected = {
-                    onAction(PlayerAction.SetVideoDecoderMode(mode = it))
-                },
-                onAudioDecoderModeSelected = {
-                    onAction(PlayerAction.SetAudioDecoderMode(mode = it))
-                },
+                onVideoDecoderModeSelected = { onAction(PlayerAction.SetVideoDecoderMode(it)) },
+                onAudioDecoderModeSelected = { onAction(PlayerAction.SetAudioDecoderMode(it)) },
                 onSelectSubtitleClick = { onAction(PlayerAction.SelectSubtitle) },
                 onSelectAudioClick = { onAction(PlayerAction.SelectAudio) },
-                onSubtitleOptionEvent = {
-                    onAction(PlayerAction.OnSubtitleOptionEvent(event = it))
-                },
-                onVideoContentScaleChanged =
-                    videoZoomAndContentScaleState::onVideoContentScaleChanged,
+                onSubtitleOptionEvent = { onAction(PlayerAction.OnSubtitleOptionEvent(it)) },
+                onVideoContentScaleChanged = videoZoomAndContentScaleState::onVideoContentScaleChanged,
             )
         }
     }
@@ -235,10 +283,7 @@ internal fun MediaPlayerControls(
     BackHandler {
         when {
             overlayView != null -> overlayView = null
-
-            isTv && controlsVisibilityState.controlsVisible ->
-                controlsVisibilityState.hideControls()
-
+            isTv && controlsVisibilityState.controlsVisible -> controlsVisibilityState.hideControls()
             else -> onAction(PlayerAction.NavigateUp)
         }
     }

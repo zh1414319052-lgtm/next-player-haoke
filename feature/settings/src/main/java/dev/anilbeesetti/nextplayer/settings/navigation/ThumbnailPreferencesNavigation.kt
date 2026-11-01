@@ -14,7 +14,7 @@ import org.koin.core.parameter.parametersOf
 object ThumbnailPreferencesRoute : NavKey
 
 fun NavBackStack<NavKey>.navigateToThumbnailPreferencesScreen() {
-    add(element = ThumbnailPreferencesRoute)
+    add(ThumbnailPreferencesRoute)
 }
 
 fun EntryProviderScope<NavKey>.thumbnailPreferencesEntry(onNavigateUp: () -> Unit) {

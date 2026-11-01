@@ -56,8 +56,8 @@ fun NextOutlinedTextField(
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val isKeyboardVisible = WindowInsets.isImeVisible
-    var isFocused by remember { mutableStateOf(value = false) }
-    var isEditing by remember(enabled) { mutableStateOf(value = false) }
+    var isFocused by remember { mutableStateOf(false) }
+    var isEditing by remember(enabled) { mutableStateOf(false) }
     val inputModifier = if (isTv) {
         Modifier
             .onFocusChanged {
@@ -66,9 +66,7 @@ fun NextOutlinedTextField(
             }
             .onPreviewKeyEvent {
                 if (!enabled || !isFocused) return@onPreviewKeyEvent false
-                val isSelect =
-                    it.key == Key.DirectionCenter || it.key == Key.Enter ||
-                        it.key == Key.NumPadEnter
+                val isSelect = it.key == Key.DirectionCenter || it.key == Key.Enter || it.key == Key.NumPadEnter
                 val direction = when (it.key) {
                     Key.DirectionUp -> FocusDirection.Up
                     Key.DirectionDown -> FocusDirection.Down
@@ -84,9 +82,7 @@ fun NextOutlinedTextField(
                     true
                 } else if (!isKeyboardVisible && direction != null) {
                     // A text field otherwise consumes arrows as cursor movement, even read-only.
-                    if (it.type == KeyEventType.KeyDown) {
-                        focusManager.moveFocus(focusDirection = direction)
-                    }
+                    if (it.type == KeyEventType.KeyDown) focusManager.moveFocus(direction)
                     true
                 } else {
                     false
@@ -99,7 +95,7 @@ fun NextOutlinedTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = modifier.then(other = inputModifier),
+        modifier = modifier.then(inputModifier),
         enabled = enabled,
         // Value-based Compose fields ignore KeyboardOptions.showKeyboardOnFocus. Keep the
         // field selectable without starting an input session until the user activates it.

@@ -22,10 +22,7 @@ object PlayerPreferencesSerializer : Serializer<PlayerPreferences> {
                 string = input.readBytes().decodeToString(),
             )
         } catch (exception: SerializationException) {
-            throw CorruptionException(
-                message = "Cannot read datastore",
-                cause = exception,
-            )
+            throw CorruptionException("Cannot read datastore", exception)
         }
     }
 

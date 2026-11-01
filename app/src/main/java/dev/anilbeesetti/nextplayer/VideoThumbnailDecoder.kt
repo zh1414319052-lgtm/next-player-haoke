@@ -8,29 +8,29 @@ import android.os.Build.VERSION.SDK_INT
 import androidx.core.graphics.applyCanvas
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toDrawable
-import androidx.core.graphics.get
 import coil3.ImageLoader
 import coil3.annotation.ExperimentalCoilApi
 import coil3.asImage
 import coil3.decode.ContentMetadata
 import coil3.decode.DecodeResult
-import coil3.decode.DecodeUtils
 import coil3.decode.Decoder
 import coil3.decode.ImageSource
 import coil3.disk.DiskCache
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
+import coil3.toAndroidUri
+import okio.FileSystem
+import androidx.core.graphics.get
+import io.github.anilbeesetti.nextlib.mediainfo.MediaThumbnailRetriever
+import kotlin.math.abs
+import coil3.decode.DecodeUtils
 import coil3.request.maxBitmapSize
 import coil3.size.Precision
 import coil3.size.Size
 import coil3.size.pxOrElse
-import coil3.toAndroidUri
 import coil3.util.component1
 import coil3.util.component2
-import io.github.anilbeesetti.nextlib.mediainfo.MediaThumbnailRetriever
-import kotlin.math.abs
 import kotlin.math.roundToInt
-import okio.FileSystem
 
 class VideoThumbnailDecoder(
     private val source: ImageSource,
@@ -45,7 +45,7 @@ class VideoThumbnailDecoder(
             when {
                 metadata is ContentMetadata -> metadata.uri.toAndroidUri().toString()
                 source.fileSystem === FileSystem.SYSTEM -> source.file().toFile().path
-                else -> error(message = "Not supported")
+                else -> error("Not supported")
             }
         }
 
@@ -56,13 +56,7 @@ class VideoThumbnailDecoder(
 
             // Read cached image dimensions (no pixel allocation)
             val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            file.inputStream().use {
-                BitmapFactory.decodeStream(
-                    it,
-                    null,
-                    boundsOpts,
-                )
-            }
+            file.inputStream().use { BitmapFactory.decodeStream(it, null, boundsOpts) }
             val cachedWidth = boundsOpts.outWidth
             val cachedHeight = boundsOpts.outHeight
 
@@ -72,13 +66,10 @@ class VideoThumbnailDecoder(
 
             // Cache is sufficient only if requested size <= cached size (or size is unspecified)
             val cacheIsSufficient = (requestedWidth == 0 || requestedWidth <= cachedWidth) &&
-                (requestedHeight == 0 || requestedHeight <= cachedHeight)
+                    (requestedHeight == 0 || requestedHeight <= cachedHeight)
 
             if (cacheIsSufficient) {
-                val dstSize = computeDstSize(
-                    srcWidth = cachedWidth,
-                    srcHeight = cachedHeight,
-                )
+                val dstSize = computeDstSize(cachedWidth, cachedHeight)
                 val sampledBitmap = file.inputStream().use { BitmapFactory.decodeStream(it) }
                 val normalizedBitmap = normalizeBitmap(
                     inBitmap = sampledBitmap,
@@ -101,67 +92,47 @@ class VideoThumbnailDecoder(
         }
 
         // Cache miss OR cache insufficient: decode fresh thumbnail
-        val rawBitmap = MediaMetadataRetriever().use { nativeRetriever ->
-            MediaThumbnailRetriever().use { ffmpegRetriever ->
-                nativeRetriever.setDataSource(source = source)
-                val fallbackRetriever = try {
-                    ffmpegRetriever.setDataSource(source = source)
-                    ffmpegRetriever
-                } catch (_: IllegalArgumentException) {
-                    // FFmpeg can fail to reopen a trashed MediaStore descriptor even
-                    // when the native retriever can read it. Keep native decoding available.
-                    null
-                }
+        val rawBitmap = MediaMetadataRetriever().use native@ { nativeRetriever ->
+            fun decodePicture(bytes: ByteArray?): Bitmap? = bytes?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
 
-                // First, try to get embedded picture (album art/metadata thumbnail)
-                val embeddedPicture =
-                    nativeRetriever.embeddedPicture ?: fallbackRetriever?.getEmbeddedPicture()
-                val embeddedPictureBitmap = embeddedPicture?.let { pictureBytes ->
-                    BitmapFactory.decodeByteArray(
-                        pictureBytes,
-                        0,
-                        pictureBytes.size,
-                    )
-                }
+            nativeRetriever.setDataSource(source)
+            decodePicture(nativeRetriever.embeddedPicture)?.let { return@native it }
 
-                if (embeddedPictureBitmap != null) return@use embeddedPictureBitmap
-
-                val videoDuration = nativeRetriever
-                    .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-                    ?.toLongOrNull() ?: 0L
-
-                return@use when (strategy) {
-                    is ThumbnailStrategy.FirstFrame -> {
-                        nativeRetriever.getFrameAtTime(0)
-                            ?: fallbackRetriever?.getFrameAtTime(timeUs = 0)
-                    }
-
-                    is ThumbnailStrategy.FrameAtPercentage -> {
-                        val timeUs = (videoDuration * strategy.percentage * 1000).toLong()
-                        nativeRetriever.getFrameAtTime(timeUs)
-                            ?: fallbackRetriever?.getFrameAtTime(timeUs = timeUs)
-                    }
-
-                    is ThumbnailStrategy.Hybrid -> {
-                        val firstFrame = nativeRetriever.getFrameAtTime(0)
-                        if (firstFrame == null || isSolidColor(bitmap = firstFrame)) {
-                            val timeUs = (videoDuration * strategy.percentage * 1000).toLong()
-                            nativeRetriever.getFrameAtTime(timeUs)
-                                ?: fallbackRetriever?.getFrameAtTime(timeUs = timeUs)
-                        } else {
-                            firstFrame
-                        }
-                    }
-                } ?: throw IllegalStateException("Failed to get video thumbnail.")
+            val videoDuration = nativeRetriever
+                .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                ?.toLongOrNull() ?: 0L
+            val fallbackTimeUs = when (strategy) {
+                ThumbnailStrategy.FirstFrame -> 0L
+                is ThumbnailStrategy.FrameAtPercentage -> (videoDuration * strategy.percentage * 1000).toLong()
+                is ThumbnailStrategy.Hybrid -> (videoDuration * strategy.percentage * 1000).toLong()
             }
+            val nativeBitmap = when (strategy) {
+                is ThumbnailStrategy.Hybrid -> {
+                    val firstFrame = nativeRetriever.getFrameAtTime(0)
+                    if (firstFrame == null || isSolidColor(firstFrame)) {
+                        firstFrame?.recycle()
+                        nativeRetriever.getFrameAtTime(fallbackTimeUs)
+                    } else {
+                        firstFrame
+                    }
+                }
+                else -> nativeRetriever.getFrameAtTime(fallbackTimeUs)
+            }
+            if (nativeBitmap != null) return@native nativeBitmap
+
+            MediaThumbnailRetriever().use fallback@ { retriever ->
+                try {
+                    retriever.setDataSource(source)
+                } catch (_: IllegalArgumentException) {
+                    return@fallback null
+                }
+                decodePicture(retriever.getEmbeddedPicture()) ?: retriever.getFrameAtTime(fallbackTimeUs)
+            } ?: throw IllegalStateException("Failed to get video thumbnail.")
         }
 
         val srcWidth = rawBitmap.width
         val srcHeight = rawBitmap.height
-        val dstSize = computeDstSize(
-            srcWidth = srcWidth,
-            srcHeight = srcHeight,
-        )
+        val dstSize = computeDstSize(srcWidth, srcHeight)
         val scaledBitmap = normalizeBitmap(
             inBitmap = rawBitmap,
             srcWidth = srcWidth,
@@ -169,7 +140,7 @@ class VideoThumbnailDecoder(
             dstSize = dstSize,
         )
 
-        writeToDiskCache(inBitmap = scaledBitmap)
+        writeToDiskCache(scaledBitmap)
 
         return DecodeResult(
             image = scaledBitmap.toDrawable(options.context.resources).asImage(),
@@ -188,17 +159,14 @@ class VideoThumbnailDecoder(
         val metadata = source.metadata
         when {
             metadata is ContentMetadata -> {
-                setDataSource(
-                    options.context,
-                    metadata.uri.toAndroidUri(),
-                )
+                setDataSource(options.context, metadata.uri.toAndroidUri())
             }
 
             source.fileSystem === FileSystem.SYSTEM -> {
                 setDataSource(source.file().toFile().path)
             }
 
-            else -> error(message = "Not supported")
+            else -> error("Not supported")
         }
     }
 
@@ -215,27 +183,24 @@ class VideoThumbnailDecoder(
                 setDataSource(source.file().toFile().path)
             }
 
-            else -> error(message = "Not supported")
+            else -> error("Not supported")
         }
     }
 
-    private fun readFromDiskCache(): DiskCache.Snapshot? =
-        if (options.diskCachePolicy.readEnabled) {
-            diskCache.value?.openSnapshot(key = diskCacheKey)
+    private fun readFromDiskCache(): DiskCache.Snapshot? {
+        return if (options.diskCachePolicy.readEnabled) {
+            diskCache.value?.openSnapshot(diskCacheKey)
         } else {
             null
         }
+    }
 
     private fun writeToDiskCache(inBitmap: Bitmap) {
         if (!options.diskCachePolicy.writeEnabled) return
-        val editor = diskCache.value?.openEditor(key = diskCacheKey) ?: return
+        val editor = diskCache.value?.openEditor(diskCacheKey) ?: return
         try {
             editor.data.toFile().outputStream().use { output ->
-                inBitmap.compress(
-                    Bitmap.CompressFormat.JPEG,
-                    90,
-                    output,
-                )
+                inBitmap.compress(Bitmap.CompressFormat.JPEG, 90, output)
             }
             editor.commit()
         } catch (_: Exception) {
@@ -243,12 +208,7 @@ class VideoThumbnailDecoder(
         }
     }
 
-    private fun normalizeBitmap(
-        inBitmap: Bitmap,
-        srcWidth: Int,
-        srcHeight: Int,
-        dstSize: Size,
-    ): Bitmap {
+    private fun normalizeBitmap(inBitmap: Bitmap, srcWidth: Int, srcHeight: Int, dstSize: Size): Bitmap {
         val scale = DecodeUtils.computeSizeMultiplier(
             srcWidth = srcWidth,
             srcHeight = srcHeight,
@@ -264,23 +224,10 @@ class VideoThumbnailDecoder(
         val dstHeight = (scale * inBitmap.height).roundToInt()
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-        val outBitmap = createBitmap(
-            width = dstWidth,
-            height = dstHeight,
-            config =
-                inBitmap.config ?: Bitmap.Config.ARGB_8888,
-        )
+        val outBitmap = createBitmap(dstWidth, dstHeight, inBitmap.config ?: Bitmap.Config.ARGB_8888)
         outBitmap.applyCanvas {
-            scale(
-                scale,
-                scale,
-            )
-            drawBitmap(
-                inBitmap,
-                0f,
-                0f,
-                paint,
-            )
+            scale(scale, scale)
+            drawBitmap(inBitmap, 0f, 0f, paint)
         }
         inBitmap.recycle()
         return outBitmap
@@ -306,7 +253,7 @@ class VideoThumbnailDecoder(
             maxSize = options.maxBitmapSize,
         )
         val finalScale = if (options.precision == Precision.INEXACT) {
-            rawScale.coerceAtMost(maximumValue = 1.0)
+            rawScale.coerceAtMost(1.0)
         } else {
             rawScale
         }
@@ -316,7 +263,9 @@ class VideoThumbnailDecoder(
         )
     }
 
-    class Factory(private val thumbnailStrategy: () -> ThumbnailStrategy) : Decoder.Factory {
+    class Factory(
+        private val thumbnailStrategy: () -> ThumbnailStrategy,
+    ) : Decoder.Factory {
         override fun create(
             result: SourceFetchResult,
             options: Options,
@@ -331,8 +280,9 @@ class VideoThumbnailDecoder(
             )
         }
 
-        private fun isApplicable(mimeType: String?): Boolean =
-            mimeType != null && mimeType.startsWith(prefix = "video/")
+        private fun isApplicable(mimeType: String?): Boolean {
+            return mimeType != null && mimeType.startsWith("video/")
+        }
     }
 }
 
@@ -387,7 +337,7 @@ private fun isSolidColor(bitmap: Bitmap, threshold: Float = 0.7f): Boolean {
             val pixelX = marginX + x * stepX
             val pixelY = marginY + y * stepY
             if (pixelX < width && pixelY < height) {
-                sampledColors.add(element = bitmap[pixelX, pixelY])
+                sampledColors.add(bitmap[pixelX, pixelY])
             }
         }
     }
@@ -407,9 +357,9 @@ private fun isSolidColor(bitmap: Bitmap, threshold: Float = 0.7f): Boolean {
         val g = (color shr 8) and 0xFF
         val b = color and 0xFF
 
-        abs(n = r - referenceR) <= tolerance &&
-            abs(n = g - referenceG) <= tolerance &&
-            abs(n = b - referenceB) <= tolerance
+        abs(r - referenceR) <= tolerance &&
+                abs(g - referenceG) <= tolerance &&
+                abs(b - referenceB) <= tolerance
     }
 
     val similarityRatio = similarCount.toFloat() / sampledColors.size

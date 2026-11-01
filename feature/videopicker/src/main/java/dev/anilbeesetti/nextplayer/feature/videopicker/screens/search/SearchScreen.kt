@@ -77,10 +77,10 @@ import dev.anilbeesetti.nextplayer.feature.videopicker.composables.FolderItem
 import dev.anilbeesetti.nextplayer.feature.videopicker.composables.MediaView
 
 @Composable
-fun SearchScreen(viewModel: SearchViewModel) {
-    val state by viewModel.state.collectAsStateWithLifecycle(
-        minActiveState = Lifecycle.State.RESUMED,
-    )
+fun SearchScreen(
+    viewModel: SearchViewModel,
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle(minActiveState = Lifecycle.State.RESUMED)
 
     SearchScreenContent(
         state = state,
@@ -90,12 +90,17 @@ fun SearchScreen(viewModel: SearchViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SearchScreenContent(state: SearchUiState, onAction: (SearchUiEvent) -> Unit) {
+internal fun SearchScreenContent(
+    state: SearchUiState,
+    onAction: (SearchUiEvent) -> Unit,
+) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
-    var isSearchFocused by remember { mutableStateOf(value = false) }
+    var isSearchFocused by remember { mutableStateOf(false) }
 
-    LaunchedEffect(key1 = Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
 
     Scaffold(
         topBar = {
@@ -103,10 +108,10 @@ internal fun SearchScreenContent(state: SearchUiState, onAction: (SearchUiEvent)
                 title = {
                     NextOutlinedTextField(
                         value = state.query,
-                        onValueChange = { onAction(SearchUiEvent.OnQueryChange(query = it)) },
+                        onValueChange = { onAction(SearchUiEvent.OnQueryChange(it)) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .focusRequester(focusRequester = focusRequester)
+                            .focusRequester(focusRequester)
                             .onFocusChanged { isSearchFocused = it.hasFocus }
                             .tvFocusRing(shape = CircleShape),
                         placeholder = {
@@ -121,9 +126,7 @@ internal fun SearchScreenContent(state: SearchUiState, onAction: (SearchUiEvent)
                         textStyle = MaterialTheme.typography.bodyLarge,
                         trailingIcon = {
                             if (state.query.isNotEmpty()) {
-                                IconButton(onClick = {
-                                    onAction(SearchUiEvent.OnQueryChange(query = ""))
-                                }) {
+                                IconButton(onClick = { onAction(SearchUiEvent.OnQueryChange("")) }) {
                                     Icon(
                                         imageVector = NextIcons.Close,
                                         contentDescription = stringResource(R.string.clear_history),
@@ -163,45 +166,31 @@ internal fun SearchScreenContent(state: SearchUiState, onAction: (SearchUiEvent)
                 },
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { scaffoldPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = scaffoldPadding.calculateTopPadding())
-                .padding(
-                    start = scaffoldPadding.calculateStartPadding(LocalLayoutDirection.current),
-                ),
+                .padding(start = scaffoldPadding.calculateStartPadding(LocalLayoutDirection.current)),
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(
-                        shape = RoundedCornerShape(
-                            topStart = 24.dp,
-                            topEnd = 24.dp,
-                        ),
-                    )
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                     .background(MaterialTheme.colorScheme.background),
             ) {
-                val updatedScaffoldPadding = scaffoldPadding.copy(
-                    top = 0.dp,
-                    start = 0.dp,
-                )
+                val updatedScaffoldPadding = scaffoldPadding.copy(top = 0.dp, start = 0.dp)
                 if (state.query.isBlank()) {
                     SuggestionsContent(
                         searchHistory = state.searchHistory,
                         popularFolders = state.popularFolders,
                         preferences = state.preferences,
                         contentPadding = updatedScaffoldPadding,
-                        onHistoryItemClick = {
-                            onAction(SearchUiEvent.OnHistoryItemClick(query = it))
-                        },
-                        onRemoveHistoryItem = {
-                            onAction(SearchUiEvent.OnRemoveHistoryItem(query = it))
-                        },
+                        onHistoryItemClick = { onAction(SearchUiEvent.OnHistoryItemClick(it)) },
+                        onRemoveHistoryItem = { onAction(SearchUiEvent.OnRemoveHistoryItem(it)) },
                         onClearHistory = { onAction(SearchUiEvent.OnClearHistory) },
-                        onFolderClick = { onAction(SearchUiEvent.OpenFolder(path = it)) },
+                        onFolderClick = { onAction(SearchUiEvent.OpenFolder(it)) },
                     )
                 } else {
                     SearchResultsContent(
@@ -210,8 +199,8 @@ internal fun SearchScreenContent(state: SearchUiState, onAction: (SearchUiEvent)
                         isSearching = state.isSearching,
                         autoFocus = !isSearchFocused,
                         contentPadding = updatedScaffoldPadding,
-                        onFolderClick = { onAction(SearchUiEvent.OpenFolder(path = it)) },
-                        onVideoClick = { onAction(SearchUiEvent.PlayVideo(uri = it)) },
+                        onFolderClick = { onAction(SearchUiEvent.OpenFolder(it)) },
+                        onVideoClick = { onAction(SearchUiEvent.PlayVideo(it)) },
                     )
                 }
             }
@@ -245,10 +234,7 @@ private fun SuggestionsContent(
                 ) {
                     ListSectionTitle(
                         text = stringResource(R.string.recent_searches),
-                        contentPadding = PaddingValues(
-                            top = 12.dp,
-                            bottom = 8.dp,
-                        ),
+                        contentPadding = PaddingValues(top = 12.dp, bottom = 8.dp),
                     )
                     TextButton(onClick = onClearHistory) {
                         Text(text = stringResource(R.string.clear_history))
@@ -329,13 +315,14 @@ private fun SuggestionsContent(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SearchHistoryItem(query: String, onClick: () -> Unit, onRemove: () -> Unit) {
+private fun SearchHistoryItem(
+    query: String,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+) {
     NextSegmentedListItem(
         modifier = Modifier.padding(horizontal = 8.dp),
-        contentPadding = PaddingValues(
-            horizontal = 16.dp,
-            vertical = 12.dp,
-        ),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         onClick = onClick,
         leadingContent = {
             Icon(
@@ -387,7 +374,9 @@ private fun SearchResultsContent(
         Box(
             modifier = Modifier.fillMaxSize().padding(top = 100.dp),
             contentAlignment = Alignment.TopCenter,
-        ) { CircularProgressIndicator() }
+        ) {
+            CircularProgressIndicator()
+        }
     }
 
     AnimatedVisibility(
@@ -455,11 +444,7 @@ private fun SearchScreenWithHistoryPreview() {
         SearchScreenContent(
             onAction = {},
             state = SearchUiState(
-                searchHistory = listOf(
-                    "avengers",
-                    "movie",
-                    "trailer",
-                ),
+                searchHistory = listOf("avengers", "movie", "trailer"),
                 popularFolders = listOf(
                     Folder(
                         name = "Movies",
@@ -487,21 +472,15 @@ private fun SearchScreenWithResultsPreview() {
                 query = "movie",
                 searchResults = SearchResults(
                     folders = listOf(
-                        element = Folder(
+                        Folder(
                             name = "Movies",
                             path = "/storage/Movies",
                             dateModified = System.currentTimeMillis(),
                         ),
                     ),
                     videos = listOf(
-                        Video.sample.copy(
-                            nameWithExtension = "Movie_Clip.mp4",
-                            uriString = "content://sample/movie_clip.mp4",
-                        ),
-                        Video.sample.copy(
-                            nameWithExtension = "My_Movie.mp4",
-                            uriString = "content://sample/my_movie.mp4",
-                        ),
+                        Video.sample.copy(nameWithExtension = "Movie_Clip.mp4", uriString = "content://sample/movie_clip.mp4"),
+                        Video.sample.copy(nameWithExtension = "My_Movie.mp4", uriString = "content://sample/my_movie.mp4"),
                     ),
                 ),
             ),

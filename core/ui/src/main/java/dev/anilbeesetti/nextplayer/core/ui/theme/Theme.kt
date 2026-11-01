@@ -3,14 +3,17 @@ package dev.anilbeesetti.nextplayer.core.ui.theme
 import android.os.Build
 import androidx.annotation.ChecksSdkIntAtLeast
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -251,9 +254,7 @@ fun NextPlayerTheme(
         dynamicColor && supportsDynamicTheming() -> {
             val context = LocalContext.current
             when {
-                darkTheme && highContrastDarkTheme -> dynamicDarkColorScheme(
-                    context = context,
-                ).copy(
+                darkTheme && highContrastDarkTheme -> dynamicDarkColorScheme(context).copy(
                     background = backgroundPureBlack,
                     surface = surfacePureBlack,
                     surfaceDim = surfaceDimPureBlack,
@@ -264,10 +265,8 @@ fun NextPlayerTheme(
                     surfaceContainerHigh = surfaceContainerHighPureBlack,
                     surfaceContainerHighest = surfaceContainerHighestPureBlack,
                 )
-
-                darkTheme -> dynamicDarkColorScheme(context = context)
-
-                else -> dynamicLightColorScheme(context = context)
+                darkTheme -> dynamicDarkColorScheme(context)
+                else -> dynamicLightColorScheme(context)
             }
         }
 
@@ -282,19 +281,27 @@ fun NextPlayerTheme(
             surfaceContainerHigh = surfaceContainerHighPureBlack,
             surfaceContainerHighest = surfaceContainerHighestPureBlack,
         )
-
         darkTheme -> darkScheme
-
         else -> lightScheme
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        motionScheme = MotionScheme.expressive(),
+        shapes = NextShapes,
+        motionScheme = MotionScheme.standard(),
         content = content,
     )
 }
 
 @ChecksSdkIntAtLeast(api = Build.VERSION_CODES.S)
 fun supportsDynamicTheming() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
+/** Corner radii from the charcoal + mint design baseline (cards 16, dialogs/sheets 24). */
+private val NextShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(20.dp),
+    extraLarge = RoundedCornerShape(24.dp),
+)

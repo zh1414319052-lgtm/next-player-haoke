@@ -28,18 +28,15 @@ class GetRecentlyPlayedVideoUseCase(
 ) {
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    operator fun invoke(folderPath: String? = null): Flow<Video?> =
-        preferencesRepository.applicationPreferences.flatMapLatest { preferences ->
+    operator fun invoke(folderPath: String? = null): Flow<Video?> {
+        return preferencesRepository.applicationPreferences.flatMapLatest { preferences ->
             // null folderPath scans all storage volumes.
             getSortedVideosUseCase(folderPath).map { videos ->
                 // Filter based on view mode when folderPath is provided
                 val filteredVideos = if (folderPath != null) {
                     when (preferences.mediaViewMode) {
-                        MediaViewMode.FOLDER_TREE -> videos
-
-                        // All descendants
+                        MediaViewMode.FOLDER_TREE -> videos // All descendants
                         MediaViewMode.FOLDERS -> videos.filter { it.parentPath == folderPath }
-
                         MediaViewMode.VIDEOS -> videos
                     }
                 } else {
@@ -47,5 +44,6 @@ class GetRecentlyPlayedVideoUseCase(
                 }
                 filteredVideos.recentPlayed()
             }
-        }.flowOn(context = defaultDispatcher)
+        }.flowOn(defaultDispatcher)
+    }
 }

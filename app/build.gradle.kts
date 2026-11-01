@@ -15,18 +15,18 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         applicationId = "dev.anilbeesetti.nextplayer"
-        versionCode = 77
-        versionName = "0.20.0"
+        versionCode = 81
+        versionName = "0.19.0-haoke.6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    testBuildType = providers.gradleProperty("haokeTestBuildType").getOrElse("debug")
+
+    testOptions { unitTests.isIncludeAndroidResources = true }
 
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-
-    testOptions {
-        unitTests.isIncludeAndroidResources = true
     }
 
     compileOptions {
@@ -36,6 +36,7 @@ android {
 
     buildTypes {
         getByName("release") {
+            applicationIdSuffix = ".haoke"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -47,6 +48,29 @@ android {
         getByName("debug") {
             isDebuggable = true
             applicationIdSuffix = ".debug"
+            versionNameSuffix = "-QA"
+        }
+
+        // Isolated user-test install: never replaces an existing formal or debug app.
+        create("qa90") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".qa90"
+            versionNameSuffix = "-QA60.1"
+            matchingFallbacks.add("debug")
+        }
+
+        create("qaSkip") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".qaskip"
+            versionNameSuffix = "-QA-aa-skip.1"
+            matchingFallbacks.add("debug")
+        }
+
+        create("qaCinema") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".qacinema"
+            versionNameSuffix = "-QA-cinema.1"
+            matchingFallbacks.add("debug")
         }
 
         create("release-with-debug-signing") {
@@ -69,18 +93,11 @@ android {
     splits {
         abi {
             //noinspection WrongGradleMethod
-            val isBuildingBundle = gradle.startParameter.taskNames.any {
-                it.lowercase().contains("bundle")
-            }
+            val isBuildingBundle = gradle.startParameter.taskNames.any { it.lowercase().contains("bundle") }
 
             isEnable = !isBuildingBundle
             reset()
-            include(
-                "armeabi-v7a",
-                "arm64-v8a",
-                "x86",
-                "x86_64",
-            )
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
             isUniversalApk = true
         }
     }
@@ -109,6 +126,7 @@ dependencies {
 
     implementation(project(":core:common"))
     implementation(project(":core:data"))
+    implementation(project(":core:cast"))
     implementation(project(":core:media"))
     implementation(project(":core:model"))
     implementation(project(":core:ui"))
@@ -149,18 +167,23 @@ dependencies {
 
     implementation(libs.github.anilbeesetti.nextlib.mediainfo)
 
+    implementation("net.i2p.crypto:eddsa:0.3.0")
+    testImplementation("org.json:json:20240303")
     testImplementation(libs.junit4)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
+    androidTestImplementation(project(":core:analysis"))
     androidTestImplementation(project(":core:domain"))
     androidTestImplementation(libs.androidx.datastore.core)
     androidTestImplementation(libs.androidx.media3.session)
+    androidTestImplementation(libs.androidx.media3.exoplayer)
+    androidTestImplementation("androidx.media3:media3-extractor:${libs.versions.androidxMedia3.get()}")
+    androidTestImplementation(libs.androidx.media3.effect)
     androidTestImplementation(libs.github.anilbeesetti.nextlib.media3ext)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.rules)
     androidTestImplementation(libs.androidx.test.espresso.core)
-    androidTestImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.androidx.compose.ui.test)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.testManifest)

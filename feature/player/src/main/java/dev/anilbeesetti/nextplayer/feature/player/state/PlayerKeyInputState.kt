@@ -1,6 +1,5 @@
 package dev.anilbeesetti.nextplayer.feature.player.state
 
-import android.media.AudioManager
 import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -16,7 +15,6 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalContext
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import kotlin.time.Duration.Companion.seconds
@@ -30,31 +28,14 @@ internal fun rememberPlayerKeyInputState(
     player: Player,
     controls: ControlsVisibilityState,
     seekIncrementMs: Long,
-    dpadUpDown: Int? = null,
 ): PlayerKeyInputState {
     val coroutineScope = rememberCoroutineScope()
-    val audioManager = LocalContext.current.getSystemService(AudioManager::class.java)
-    val state = remember(
-        player,
-        controls,
-        seekIncrementMs,
-        dpadUpDown,
-    ) {
-        PlayerKeyInputState(
-            player,
-            controls,
-            seekIncrementMs,
-            coroutineScope,
-            dpadUpDown,
-        ) { up ->
-            audioManager.adjustStreamVolume(
-                AudioManager.STREAM_MUSIC,
-                if (up) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER,
-                AudioManager.FLAG_SHOW_UI,
-            )
-        }
+    val state = remember(player, controls, seekIncrementMs) {
+        PlayerKeyInputState(player, controls, seekIncrementMs, coroutineScope)
     }
-    DisposableEffect(key1 = state) { onDispose { state.cancelPendingReset() } }
+    DisposableEffect(state) {
+        onDispose { state.cancelPendingReset() }
+    }
     return state
 }
 
@@ -64,16 +45,14 @@ internal class PlayerKeyInputState(
     private val controls: ControlsVisibilityState,
     private val seekIncrementMs: Long,
     private val coroutineScope: CoroutineScope,
-    private val dpadUpDown: Int? = null,
-    private val adjustVolume: (Boolean) -> Unit = {},
 ) {
-    var isSeeking: Boolean by mutableStateOf(value = false)
+    var isSeeking: Boolean by mutableStateOf(false)
         private set
 
-    var seekOffsetMs: Long by mutableLongStateOf(value = 0L)
+    var seekOffsetMs: Long by mutableLongStateOf(0L)
         private set
 
-    var seekPositionMs: Long by mutableLongStateOf(value = 0L)
+    var seekPositionMs: Long by mutableLongStateOf(0L)
         private set
 
     private var resetJob: Job? = null
@@ -89,11 +68,7 @@ internal class PlayerKeyInputState(
         if (controls.controlsLocked) {
             return when (keyEvent.key) {
                 Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                    if (controls.controlsVisible) {
-                        controls.unlockControls()
-                    } else {
-                        controls.showControls()
-                    }
+                    if (controls.controlsVisible) controls.unlockControls() else controls.showControls()
                     true
                 }
 
@@ -106,14 +81,8 @@ internal class PlayerKeyInputState(
 
         fun seekBy(deltaMs: Long) {
             val duration = player.duration
-            val target = (player.currentPosition + deltaMs).coerceAtLeast(minimumValue = 0)
-            player.seekTo(
-                if (duration > 0) {
-                    target.coerceAtMost(maximumValue = duration)
-                } else {
-                    target
-                },
-            )
+            val target = (player.currentPosition + deltaMs).coerceAtLeast(0)
+            player.seekTo(if (duration > 0) target.coerceAtMost(duration) else target)
         }
 
         fun togglePlayPause() {
@@ -140,13 +109,13 @@ internal class PlayerKeyInputState(
             }
 
             Key.MediaFastForward -> {
-                seekBy(deltaMs = seekIncrementMs)
+                seekBy(seekIncrementMs)
                 controls.showControls()
                 true
             }
 
             Key.MediaRewind -> {
-                seekBy(deltaMs = -seekIncrementMs)
+                seekBy(-seekIncrementMs)
                 controls.showControls()
                 true
             }
@@ -171,8 +140,8 @@ internal class PlayerKeyInputState(
 
             Key.DirectionLeft -> {
                 if (!controls.controlsVisible) {
-                    seekBy(deltaMs = -seekIncrementMs)
-                    showSeekFeedback(deltaMs = -seekIncrementMs)
+                    seekBy(-seekIncrementMs)
+                    showSeekFeedback(-seekIncrementMs)
                     true
                 } else {
                     controls.showControls()
@@ -182,8 +151,8 @@ internal class PlayerKeyInputState(
 
             Key.DirectionRight -> {
                 if (!controls.controlsVisible) {
-                    seekBy(deltaMs = seekIncrementMs)
-                    showSeekFeedback(deltaMs = seekIncrementMs)
+                    seekBy(seekIncrementMs)
+                    showSeekFeedback(seekIncrementMs)
                     true
                 } else {
                     controls.showControls()
@@ -193,19 +162,7 @@ internal class PlayerKeyInputState(
 
             Key.DirectionUp, Key.DirectionDown -> {
                 if (!controls.controlsVisible) {
-                    when (dpadUpDown) {
-                        1 -> if (keyEvent.key ==
-                            Key.DirectionUp
-                        ) {
-                            player.seekToNextMediaItem()
-                        } else {
-                            player.seekToPreviousMediaItem()
-                        }
-
-                        0 -> adjustVolume(keyEvent.key == Key.DirectionUp)
-
-                        else -> controls.showControls()
-                    }
+                    controls.showControls()
                     true
                 } else {
                     controls.showControls()

@@ -28,6 +28,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -42,7 +43,7 @@ class PlaylistDetailViewModelTest {
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(dispatcher = dispatcher)
+        Dispatchers.setMain(dispatcher)
         context = RuntimeEnvironment.getApplication()
         repository = FakePlaylistRepository()
         systemService = FakeSystemService()
@@ -55,64 +56,51 @@ class PlaylistDetailViewModelTest {
     }
 
     @Test
-    fun fileRefreshReplacesItemsAndPreservesSavedName() = runTest(context = dispatcher) {
-        val sourceFile = kotlin.io.path.createTempFile(suffix = ".m3u").toFile()
-        sourceFile.writeText(text = "#PLAYLIST:New source name\nhttps://media.example/new")
-        repository.playlist.value = linkedRecord(Uri.fromFile(sourceFile).toString())
+    fun fileRefreshReplacesItemsAndPreservesSavedName() = runTest(dispatcher) {
+        val sourceUri = Uri.parse("file:///storage/emulated/0/Playlists/list.m3u")
+        shadowOf(context.contentResolver).registerInputStream(
+            sourceUri,
+            "#PLAYLIST:New source name\nhttps://media.example/new".byteInputStream(),
+        )
+        repository.playlist.value = linkedRecord(sourceUri.toString())
         val viewModel = viewModel()
-        try {
-            runCurrent()
-            viewModel.onAction(action = PlaylistDetailUiAction.Refresh)
-            advanceUntilIdle()
+        runCurrent()
+        viewModel.onAction(PlaylistDetailUiAction.Refresh)
+        advanceUntilIdle()
 
-            assertEquals(
-                listOf(element = "https://media.example/new"),
-                repository.replacementCalls.single().second.map { it.uri },
-            )
-            val playlist = (viewModel.state.value.playlistDataState as DataState.Success).value
-            assertEquals(
-                "Saved name",
-                playlist?.name,
-            )
-            assertFalse(viewModel.state.value.isRefreshing)
-            assertEquals(
-                1,
-                systemService.toasts.size,
-            )
-        } finally {
-            sourceFile.delete()
-        }
+        assertEquals(
+            listOf("https://media.example/new"),
+            repository.replacementCalls.single().second.map { it.uri },
+        )
+        val playlist = (viewModel.state.value.playlistDataState as DataState.Success).value
+        assertEquals("Saved name", playlist?.name)
+        assertFalse(viewModel.state.value.isRefreshing)
+        assertEquals(1, systemService.toasts.size)
     }
 
     @Test
-    fun failedRefreshKeepsCachedItemsAndSkipsReplacement() = runTest(context = dispatcher) {
-        repository.playlist.value = linkedRecord(source = "file:///missing/list.m3u")
+    fun failedRefreshKeepsCachedItemsAndSkipsReplacement() = runTest(dispatcher) {
+        repository.playlist.value = linkedRecord("file:///missing/list.m3u")
         val viewModel = viewModel()
         runCurrent()
 
-        viewModel.onAction(action = PlaylistDetailUiAction.Refresh)
+        viewModel.onAction(PlaylistDetailUiAction.Refresh)
         advanceUntilIdle()
 
         val playlist = (viewModel.state.value.playlistDataState as DataState.Success).value
-        assertEquals(
-            listOf(element = "https://media.example/cached"),
-            playlist?.items?.map { it.uri },
-        )
+        assertEquals(listOf("https://media.example/cached"), playlist?.items?.map { it.uri })
         assertTrue(repository.replacementCalls.isEmpty())
         assertFalse(viewModel.state.value.isRefreshing)
-        assertEquals(
-            1,
-            systemService.toasts.size,
-        )
+        assertEquals(1, systemService.toasts.size)
     }
 
     @Test
-    fun localRefreshIsIgnored() = runTest(context = dispatcher) {
+    fun localRefreshIsIgnored() = runTest(dispatcher) {
         repository.playlist.value = linkedRecord(source = null).copy(type = PlaylistType.LOCAL)
         val viewModel = viewModel()
         runCurrent()
 
-        viewModel.onAction(action = PlaylistDetailUiAction.Refresh)
+        viewModel.onAction(PlaylistDetailUiAction.Refresh)
         advanceUntilIdle()
 
         assertTrue(repository.replacementCalls.isEmpty())
@@ -120,17 +108,11 @@ class PlaylistDetailViewModelTest {
     }
 
     private fun viewModel() = PlaylistDetailViewModel(
-        observePlaylist = ObservePlaylistUseCase(
-            playlistRepository = repository,
-            mediaRepository = mediaRepository,
-        ),
+        observePlaylist = ObservePlaylistUseCase(repository, mediaRepository),
         playlistRepository = repository,
-        m3uParser = M3UParser(
-            context = context,
-            Dispatchers.Unconfined,
-        ),
+        m3uParser = M3UParser(context, Dispatchers.Unconfined),
         systemService = systemService,
-        input = PlaylistDetailViewModel.Input(playlistId = 7),
+        input = PlaylistDetailViewModel.Input(7),
         output = PlaylistDetailViewModel.Output(
             navigateUp = {},
             playPlaylist = { _, _ -> },
@@ -143,7 +125,7 @@ class PlaylistDetailViewModelTest {
         type = PlaylistType.M3U_FILE,
         source = source,
         items = listOf(
-            element = PlaylistItemRecord(
+            PlaylistItemRecord(
                 position = 0,
                 uri = "https://media.example/cached",
                 title = "Cached",

@@ -1,3 +1,5 @@
+@file:androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+
 package dev.anilbeesetti.nextplayer.feature.player.state
 
 import androidx.activity.compose.LocalActivity
@@ -22,18 +24,9 @@ import kotlinx.coroutines.launch
 fun rememberControlsVisibilityState(player: Player, hideAfter: Duration): ControlsVisibilityState {
     val activity = LocalActivity.current
     val coroutineScope = rememberCoroutineScope()
-    val controlsVisibilityState = remember {
-        ControlsVisibilityState(
-            player = player,
-            hideAfter = hideAfter,
-            scope = coroutineScope,
-        )
-    }
-    LaunchedEffect(key1 = player) { controlsVisibilityState.observe() }
-    LaunchedEffect(
-        controlsVisibilityState.controlsVisible,
-        controlsVisibilityState.controlsLocked,
-    ) {
+    val controlsVisibilityState = remember { ControlsVisibilityState(player, hideAfter, coroutineScope) }
+    LaunchedEffect(player) { controlsVisibilityState.observe() }
+    LaunchedEffect(controlsVisibilityState.controlsVisible, controlsVisibilityState.controlsLocked) {
         if (controlsVisibilityState.controlsLocked) {
             activity?.toggleSystemBars(showBars = false)
             return@LaunchedEffect
@@ -55,15 +48,15 @@ class ControlsVisibilityState(
 ) {
     private var autoHideControlsJob: Job? = null
 
-    var controlsVisible: Boolean by mutableStateOf(value = true)
+    var controlsVisible: Boolean by mutableStateOf(true)
         private set
 
-    var controlsLocked: Boolean by mutableStateOf(value = false)
+    var controlsLocked: Boolean by mutableStateOf(false)
         private set
 
     fun showControls(duration: Duration = hideAfter) {
         controlsVisible = true
-        autoHideControls(duration = duration)
+        autoHideControls(duration)
     }
 
     fun hideControls() {
@@ -102,7 +95,7 @@ class ControlsVisibilityState(
         autoHideControlsJob?.cancel()
         if (duration <= Duration.ZERO) return
         autoHideControlsJob = scope.launch {
-            delay(duration = duration)
+            delay(duration)
             if (player.isPlaying) {
                 controlsVisible = false
             }

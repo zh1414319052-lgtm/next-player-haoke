@@ -38,7 +38,10 @@ import dev.anilbeesetti.nextplayer.core.ui.components.thenIf
 import kotlinx.coroutines.launch
 
 @Composable
-fun MediaInfoDialog(mediaInfo: MediaInfo, onDismiss: () -> Unit) {
+fun MediaInfoDialog(
+    mediaInfo: MediaInfo,
+    onDismiss: () -> Unit,
+) {
     val context = LocalContext.current
     val isTv = remember { context.isTelevision }
     val scrollState = rememberScrollState()
@@ -48,7 +51,9 @@ fun MediaInfoDialog(mediaInfo: MediaInfo, onDismiss: () -> Unit) {
     // On a TV the info panel has no focusable rows, so make it focusable and scroll it with the
     // D-pad. Focus escapes to the OK button once there's nothing left to scroll.
     if (isTv) {
-        LaunchedEffect(key1 = Unit) { runCatching { focusRequester.requestFocus() } }
+        LaunchedEffect(Unit) {
+            runCatching { focusRequester.requestFocus() }
+        }
     }
 
     NextDialog(
@@ -65,31 +70,26 @@ fun MediaInfoDialog(mediaInfo: MediaInfo, onDismiss: () -> Unit) {
             Column(
                 verticalArrangement = Arrangement.spacedBy(5.dp),
                 modifier = Modifier
-                    .verticalScroll(state = scrollState)
-                    .thenIf(condition = isTv) {
-                        focusRequester(focusRequester = focusRequester)
+                    .verticalScroll(scrollState)
+                    .thenIf(isTv) {
+                        focusRequester(focusRequester)
                             .focusable()
                             .onKeyEvent { event ->
                                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                                val amount =
-                                    (scrollState.viewportSize * 0.8f).takeIf { it > 0f } ?: 400f
+                                val amount = (scrollState.viewportSize * 0.8f).takeIf { it > 0f } ?: 400f
                                 when (event.key) {
                                     Key.DirectionDown -> if (scrollState.canScrollForward) {
-                                        scope.launch { scrollState.animateScrollBy(value = amount) }
+                                        scope.launch { scrollState.animateScrollBy(amount) }
                                         true
                                     } else {
                                         false
                                     }
-
                                     Key.DirectionUp -> if (scrollState.canScrollBackward) {
-                                        scope.launch {
-                                            scrollState.animateScrollBy(value = -amount)
-                                        }
+                                        scope.launch { scrollState.animateScrollBy(-amount) }
                                         true
                                     } else {
                                         false
                                     }
-
                                     else -> false
                                 }
                             }
@@ -146,9 +146,7 @@ fun MediaInfoDialog(mediaInfo: MediaInfo, onDismiss: () -> Unit) {
                     }
                 }
                 mediaInfo.audioStreams.forEachIndexed { index, audioStream ->
-                    MediaInfoTitle(
-                        text = "${stringResource(id = R.string.audio_track)} #${index + 1}",
-                    )
+                    MediaInfoTitle(text = "${stringResource(id = R.string.audio_track)} #${index + 1}")
                     audioStream.title?.let {
                         MediaInfoText(
                             title = stringResource(id = R.string.title),
@@ -185,9 +183,7 @@ fun MediaInfoDialog(mediaInfo: MediaInfo, onDismiss: () -> Unit) {
                     }
                 }
                 mediaInfo.subtitleStreams.forEachIndexed { index, subtitleStream ->
-                    MediaInfoTitle(
-                        text = "${stringResource(id = R.string.subtitle_track)} #${index + 1}",
-                    )
+                    MediaInfoTitle(text = "${stringResource(id = R.string.subtitle_track)} #${index + 1}")
                     subtitleStream.title?.let {
                         MediaInfoText(
                             title = stringResource(id = R.string.title),
@@ -208,7 +204,9 @@ fun MediaInfoDialog(mediaInfo: MediaInfo, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(text = stringResource(id = R.string.okay)) }
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(id = R.string.okay))
+            }
         },
     )
 }
@@ -216,26 +214,24 @@ fun MediaInfoDialog(mediaInfo: MediaInfo, onDismiss: () -> Unit) {
 @Composable
 private fun MediaInfoTitle(
     text: String,
-    paddingValues: PaddingValues = PaddingValues(
-        top = 16.dp,
-        bottom = 2.dp,
-    ),
+    paddingValues: PaddingValues = PaddingValues(top = 16.dp, bottom = 2.dp),
 ) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleLarge,
         color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(paddingValues = paddingValues),
+        modifier = Modifier.padding(paddingValues),
     )
 }
 
 @Composable
-private fun MediaInfoText(title: String, subText: String, modifier: Modifier = Modifier) {
+private fun MediaInfoText(
+    title: String,
+    subText: String,
+    modifier: Modifier = Modifier,
+) {
     Row(modifier = modifier) {
-        Text(
-            text = "$title: ",
-            style = MaterialTheme.typography.titleSmall,
-        )
+        Text(text = "$title: ", style = MaterialTheme.typography.titleSmall)
         Text(text = subText)
     }
 }

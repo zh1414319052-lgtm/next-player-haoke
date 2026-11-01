@@ -36,7 +36,7 @@ fun CenterCircularProgressBar(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         CircularProgressIndicator(
-            modifier = Modifier.testTag(tag = CIRCULAR_PROGRESS_INDICATOR_TEST_TAG),
+            modifier = Modifier.testTag(CIRCULAR_PROGRESS_INDICATOR_TEST_TAG),
         )
     }
 }
@@ -47,8 +47,8 @@ fun NoVideosFound(contentPadding: PaddingValues) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(state = rememberScrollState())
-            .padding(paddingValues = contentPadding)
+            .verticalScroll(rememberScrollState())
+            .padding(contentPadding)
             .padding(
                 horizontal = 24.dp,
                 vertical = 40.dp,

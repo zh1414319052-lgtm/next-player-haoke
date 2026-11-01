@@ -8,10 +8,7 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "hidden_video",
     indices = [
-        Index(
-            value = ["vault_path"],
-            unique = true,
-        ),
+        Index(value = ["vault_path"], unique = true),
     ],
 )
 data class HiddenVideoEntity(

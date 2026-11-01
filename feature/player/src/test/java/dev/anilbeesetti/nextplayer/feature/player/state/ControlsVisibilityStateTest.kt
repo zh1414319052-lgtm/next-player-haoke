@@ -23,11 +23,7 @@ import org.robolectric.shadows.ShadowLooper
 class ControlsVisibilityStateTest {
     @Test
     fun zeroTimeoutKeepsControlsVisibleAndAllowsManualHiding() = runTest {
-        val controls = ControlsVisibilityState(
-            player = TestPlayer(),
-            Duration.ZERO,
-            scope = backgroundScope,
-        )
+        val controls = ControlsVisibilityState(TestPlayer(), Duration.ZERO, backgroundScope)
 
         controls.showControls()
         advanceTimeBy(11.minutes.inWholeMilliseconds)
@@ -48,11 +44,7 @@ class ControlsVisibilityStateTest {
     @Test
     fun zeroTimeoutKeepsControlsVisibleWhenPlaybackStarts() = runTest {
         val player = TestPlayer(playing = false)
-        val controls = ControlsVisibilityState(
-            player = player,
-            Duration.ZERO,
-            scope = backgroundScope,
-        )
+        val controls = ControlsVisibilityState(player, Duration.ZERO, backgroundScope)
         backgroundScope.launch { controls.observe() }
         runCurrent()
 
@@ -65,29 +57,21 @@ class ControlsVisibilityStateTest {
 
     @Test
     fun tenMinuteTimeoutHidesControlsOnlyAfterTheFullDuration() = runTest {
-        val controls = ControlsVisibilityState(
-            player = TestPlayer(),
-            10.minutes,
-            scope = backgroundScope,
-        )
+        val controls = ControlsVisibilityState(TestPlayer(), 10.minutes, backgroundScope)
 
         controls.showControls()
-        advanceTimeBy(delayTimeMillis = 10.minutes.inWholeMilliseconds - 1)
+        advanceTimeBy(10.minutes.inWholeMilliseconds - 1)
         runCurrent()
         assertTrue(controls.controlsVisible)
 
-        advanceTimeBy(delayTimeMillis = 1)
+        advanceTimeBy(1)
         runCurrent()
         assertFalse(controls.controlsVisible)
     }
 
     @Test
     fun showingControlsWithZeroDurationCancelsAnExistingTimer() = runTest {
-        val controls = ControlsVisibilityState(
-            player = TestPlayer(),
-            4.seconds,
-            scope = backgroundScope,
-        )
+        val controls = ControlsVisibilityState(TestPlayer(), 4.seconds, backgroundScope)
 
         controls.showControls()
         runCurrent()
@@ -100,28 +84,16 @@ class ControlsVisibilityStateTest {
 
     private class TestPlayer(playing: Boolean = true) : SimpleBasePlayer(Looper.getMainLooper()) {
         private var currentState = State.Builder()
-            .setPlaylist(
-                listOf(
-                    MediaItemData.Builder(
-                        "video",
-                    ).setDurationUs(20.minutes.inWholeMicroseconds).build(),
-                ),
-            )
+            .setPlaylist(listOf(MediaItemData.Builder("video").setDurationUs(20.minutes.inWholeMicroseconds).build()))
             .setPlaybackState(Player.STATE_READY)
-            .setPlayWhenReady(
-                playing,
-                Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST,
-            )
+            .setPlayWhenReady(playing, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
             .build()
 
         override fun getState(): State = currentState
 
         fun startPlayback() {
             currentState = currentState.buildUpon()
-                .setPlayWhenReady(
-                    true,
-                    Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST,
-                )
+                .setPlayWhenReady(true, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
                 .build()
             invalidateState()
             ShadowLooper.idleMainLooper()

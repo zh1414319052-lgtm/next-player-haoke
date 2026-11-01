@@ -43,20 +43,12 @@ class NetworkViewModelTest {
             connection = connection(privateKeyFileName = "living-room.key"),
             events = events,
         )
-        val keyStore = FakeSshKeyStore(events = events)
+        val keyStore = FakeSshKeyStore(events)
 
-        deleteConnectionAndCleanup(
-            id = 7,
-            repository = repository,
-            sshKeyStore = keyStore,
-        )
+        deleteConnectionAndCleanup(7, repository, keyStore)
 
         assertEquals(
-            listOf(
-                "repository.get:7",
-                "repository.delete:7",
-                "key.delete:living-room.key",
-            ),
+            listOf("repository.get:7", "repository.delete:7", "key.delete:living-room.key"),
             events,
         )
     }
@@ -64,22 +56,12 @@ class NetworkViewModelTest {
     @Test
     fun `missing connection stops after lookup`() = runTest {
         val events = mutableListOf<String>()
-        val repository = FakeNetworkConnectionRepository(
-            connection = null,
-            events = events,
-        )
-        val keyStore = FakeSshKeyStore(events = events)
+        val repository = FakeNetworkConnectionRepository(connection = null, events = events)
+        val keyStore = FakeSshKeyStore(events)
 
-        deleteConnectionAndCleanup(
-            id = 7,
-            repository = repository,
-            sshKeyStore = keyStore,
-        )
+        deleteConnectionAndCleanup(7, repository, keyStore)
 
-        assertEquals(
-            listOf(element = "repository.get:7"),
-            events,
-        )
+        assertEquals(listOf("repository.get:7"), events)
     }
 
     @Test
@@ -93,27 +75,12 @@ class NetworkViewModelTest {
         )
 
         val thrown = assertThrows(IllegalStateException::class.java) {
-            runBlocking {
-                deleteConnectionAndCleanup(
-                    id = 7,
-                    repository = repository,
-                    sshKeyStore = FakeSshKeyStore(events = events),
-                )
-            }
+            runBlocking { deleteConnectionAndCleanup(7, repository, FakeSshKeyStore(events)) }
         }
 
-        assertEquals(
-            failure.message,
-            thrown.message,
-        )
-        assertSame(
-            failure,
-            thrown.cause ?: thrown,
-        )
-        assertEquals(
-            listOf(element = "repository.get:7"),
-            events,
-        )
+        assertEquals(failure.message, thrown.message)
+        assertSame(failure, thrown.cause ?: thrown)
+        assertEquals(listOf("repository.get:7"), events)
     }
 
     @Test
@@ -125,33 +92,15 @@ class NetworkViewModelTest {
             events = events,
             deleteFailure = failure,
         )
-        val keyStore = FakeSshKeyStore(events = events)
+        val keyStore = FakeSshKeyStore(events)
 
         val thrown = assertThrows(IllegalStateException::class.java) {
-            runBlocking {
-                deleteConnectionAndCleanup(
-                    id = 7,
-                    repository = repository,
-                    sshKeyStore = keyStore,
-                )
-            }
+            runBlocking { deleteConnectionAndCleanup(7, repository, keyStore) }
         }
 
-        assertEquals(
-            failure.message,
-            thrown.message,
-        )
-        assertSame(
-            failure,
-            thrown.cause ?: thrown,
-        )
-        assertEquals(
-            listOf(
-                "repository.get:7",
-                "repository.delete:7",
-            ),
-            events,
-        )
+        assertEquals(failure.message, thrown.message)
+        assertSame(failure, thrown.cause ?: thrown)
+        assertEquals(listOf("repository.get:7", "repository.delete:7"), events)
     }
 
     @Test
@@ -165,19 +114,9 @@ class NetworkViewModelTest {
             events = events,
         )
 
-        deleteConnectionAndCleanup(
-            id = 7,
-            repository = repository,
-            sshKeyStore = FakeSshKeyStore(events = events),
-        )
+        deleteConnectionAndCleanup(7, repository, FakeSshKeyStore(events))
 
-        assertEquals(
-            listOf(
-                "repository.get:7",
-                "repository.delete:7",
-            ),
-            events,
-        )
+        assertEquals(listOf("repository.get:7", "repository.delete:7"), events)
     }
 
     @Test
@@ -188,19 +127,9 @@ class NetworkViewModelTest {
             events = events,
         )
 
-        deleteConnectionAndCleanup(
-            id = 7,
-            repository = repository,
-            sshKeyStore = FakeSshKeyStore(events = events),
-        )
+        deleteConnectionAndCleanup(7, repository, FakeSshKeyStore(events))
 
-        assertEquals(
-            listOf(
-                "repository.get:7",
-                "repository.delete:7",
-            ),
-            events,
-        )
+        assertEquals(listOf("repository.get:7", "repository.delete:7"), events)
     }
 
     @Test
@@ -208,33 +137,15 @@ class NetworkViewModelTest {
         val events = mutableListOf<String>()
         val original = connection(privateKeyFileName = "living-room.key")
         val keyFailure = IllegalStateException("Key delete failed")
-        val repository = FakeNetworkConnectionRepository(
-            connection = original,
-            events = events,
-        )
-        val keyStore = FakeSshKeyStore(
-            events = events,
-            deleteFailure = keyFailure,
-        )
+        val repository = FakeNetworkConnectionRepository(connection = original, events = events)
+        val keyStore = FakeSshKeyStore(events, deleteFailure = keyFailure)
 
         val thrown = assertThrows(IllegalStateException::class.java) {
-            runBlocking {
-                deleteConnectionAndCleanup(
-                    id = 7,
-                    repository = repository,
-                    sshKeyStore = keyStore,
-                )
-            }
+            runBlocking { deleteConnectionAndCleanup(7, repository, keyStore) }
         }
 
-        assertEquals(
-            keyFailure.message,
-            thrown.message,
-        )
-        assertSame(
-            keyFailure,
-            thrown.cause ?: thrown,
-        )
+        assertEquals(keyFailure.message, thrown.message)
+        assertSame(keyFailure, thrown.cause ?: thrown)
         assertEquals(
             listOf(
                 "repository.get:7",
@@ -244,10 +155,7 @@ class NetworkViewModelTest {
             ),
             events,
         )
-        assertEquals(
-            listOf(element = original),
-            repository.upsertedConnections,
-        )
+        assertEquals(listOf(original), repository.upsertedConnections)
     }
 
     @Test
@@ -264,29 +172,17 @@ class NetworkViewModelTest {
         val thrown = assertThrows(IllegalStateException::class.java) {
             runBlocking {
                 deleteConnectionAndCleanup(
-                    id = 7,
-                    repository = repository,
-                    sshKeyStore = FakeSshKeyStore(
-                        events = events,
-                        deleteFailure = keyFailure,
-                    ),
+                    7,
+                    repository,
+                    FakeSshKeyStore(events, deleteFailure = keyFailure),
                 )
             }
         }
 
         val originalKeyFailure = thrown.cause ?: thrown
-        assertSame(
-            keyFailure,
-            originalKeyFailure,
-        )
-        assertEquals(
-            listOf(element = rollbackFailure),
-            originalKeyFailure.suppressed.toList(),
-        )
-        assertEquals(
-            "repository.upsert:7",
-            events.last(),
-        )
+        assertSame(keyFailure, originalKeyFailure)
+        assertEquals(listOf(rollbackFailure), originalKeyFailure.suppressed.toList())
+        assertEquals("repository.upsert:7", events.last())
     }
 
     @Test
@@ -298,34 +194,23 @@ class NetworkViewModelTest {
             connection = connection(privateKeyFileName = "living-room.key"),
             events = events,
             afterDelete = {
-                rowDeleted.complete(value = Unit)
+                rowDeleted.complete(Unit)
                 allowDeleteToReturn.await()
             },
         )
-        val keyStore = FakeSshKeyStore(
-            events = events,
-            beforeDelete = { yield() },
-        )
+        val keyStore = FakeSshKeyStore(events, beforeDelete = { yield() })
 
         val deletion = launch {
-            deleteConnectionAndCleanup(
-                id = 7,
-                repository = repository,
-                sshKeyStore = keyStore,
-            )
+            deleteConnectionAndCleanup(7, repository, keyStore)
         }
         rowDeleted.await()
         deletion.cancel()
-        allowDeleteToReturn.complete(value = Unit)
+        allowDeleteToReturn.complete(Unit)
         deletion.join()
 
         assertTrue(deletion.isCancelled)
         assertEquals(
-            listOf(
-                "repository.get:7",
-                "repository.delete:7",
-                "key.delete:living-room.key",
-            ),
+            listOf("repository.get:7", "repository.delete:7", "key.delete:living-room.key"),
             events,
         )
     }
@@ -337,72 +222,42 @@ class NetworkViewModelTest {
             val deleteEvents = mutableListOf<String>()
             val cleanupEvents = mutableListOf<String>()
             NetworkViewModel(
-                output = NetworkViewModel.Output(
-                    addConnection = {},
-                    editConnection = {},
-                    openConnection = {},
-                    openSettings = {},
-                    openStream = {},
-                ),
+                output = NetworkViewModel.Output(addConnection = {}, editConnection = {}, openConnection = {}, openSettings = {}, openStream = {}),
                 repository = FakeNetworkConnectionRepository(
                     connection = null,
                     events = lookupEvents,
                     lookupFailure = IllegalStateException("lookup"),
                 ),
-                sshKeyStore = FakeSshKeyStore(events = lookupEvents),
-            ).onAction(NetworkAction.DeleteConnection(id = 1))
+                sshKeyStore = FakeSshKeyStore(lookupEvents),
+            ).onAction(NetworkAction.DeleteConnection(1))
 
             NetworkViewModel(
-                output = NetworkViewModel.Output(
-                    addConnection = {},
-                    editConnection = {},
-                    openConnection = {},
-                    openSettings = {},
-                    openStream = {},
-                ),
+                output = NetworkViewModel.Output(addConnection = {}, editConnection = {}, openConnection = {}, openSettings = {}, openStream = {}),
                 repository = FakeNetworkConnectionRepository(
                     connection = connection(privateKeyFileName = "delete.key"),
                     events = deleteEvents,
                     deleteFailure = IllegalStateException("delete"),
                 ),
-                sshKeyStore = FakeSshKeyStore(events = deleteEvents),
-            ).onAction(NetworkAction.DeleteConnection(id = 2))
+                sshKeyStore = FakeSshKeyStore(deleteEvents),
+            ).onAction(NetworkAction.DeleteConnection(2))
 
             NetworkViewModel(
-                output = NetworkViewModel.Output(
-                    addConnection = {},
-                    editConnection = {},
-                    openConnection = {},
-                    openSettings = {},
-                    openStream = {},
-                ),
+                output = NetworkViewModel.Output(addConnection = {}, editConnection = {}, openConnection = {}, openSettings = {}, openStream = {}),
                 repository = FakeNetworkConnectionRepository(
                     connection = connection(privateKeyFileName = "cleanup.key"),
                     events = cleanupEvents,
                 ),
                 sshKeyStore = FakeSshKeyStore(
-                    events = cleanupEvents,
+                    cleanupEvents,
                     deleteFailure = IllegalStateException("cleanup"),
                 ),
-            ).onAction(NetworkAction.DeleteConnection(id = 3))
+            ).onAction(NetworkAction.DeleteConnection(3))
 
             advanceUntilIdle()
 
-            assertEquals(
-                listOf(element = "repository.get:1"),
-                lookupEvents,
-            )
-            assertEquals(
-                listOf(
-                    "repository.get:2",
-                    "repository.delete:2",
-                ),
-                deleteEvents,
-            )
-            assertEquals(
-                "repository.upsert:7",
-                cleanupEvents.last(),
-            )
+            assertEquals(listOf("repository.get:1"), lookupEvents)
+            assertEquals(listOf("repository.get:2", "repository.delete:2"), deleteEvents)
+            assertEquals("repository.upsert:7", cleanupEvents.last())
         }
 
     private fun connection(
@@ -428,7 +283,7 @@ private class FakeNetworkConnectionRepository(
 ) : NetworkConnectionRepository {
     val upsertedConnections = mutableListOf<NetworkConnection>()
 
-    override fun getConnections(): Flow<List<NetworkConnection>> = flowOf(value = emptyList())
+    override fun getConnections(): Flow<List<NetworkConnection>> = flowOf(emptyList())
 
     override suspend fun getConnection(id: Long): NetworkConnection? {
         events += "repository.get:$id"
@@ -455,11 +310,11 @@ private class FakeSshKeyStore(
     private val deleteFailure: Throwable? = null,
     private val beforeDelete: suspend () -> Unit = {},
 ) : SshKeyStore {
-    override suspend fun stage(uri: Uri): StagedSshKey = error(message = "Not used")
+    override suspend fun stage(uri: Uri): StagedSshKey = error("Not used")
 
-    override fun resolve(fileName: String): File = error(message = "Not used")
+    override fun resolve(fileName: String): File = error("Not used")
 
-    override suspend fun commit(fileName: String): String = error(message = "Not used")
+    override suspend fun commit(fileName: String): String = error("Not used")
 
     override suspend fun delete(fileName: String) {
         beforeDelete()
@@ -469,10 +324,11 @@ private class FakeSshKeyStore(
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class MainDispatcherRule(val testDispatcher: TestDispatcher = StandardTestDispatcher()) :
-    TestWatcher() {
+class MainDispatcherRule(
+    val testDispatcher: TestDispatcher = StandardTestDispatcher(),
+) : TestWatcher() {
     override fun starting(description: Description) {
-        Dispatchers.setMain(dispatcher = testDispatcher)
+        Dispatchers.setMain(testDispatcher)
     }
 
     override fun finished(description: Description) {

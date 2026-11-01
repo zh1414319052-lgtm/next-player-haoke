@@ -38,13 +38,13 @@ class PlaylistListScreenTest {
         composeRule.setContent {
             NextPlayerTheme {
                 CompositionLocalProvider(
-                    value = LocalTopLevelFabSetter provides { key, state ->
+                    LocalTopLevelFabSetter provides { key, state ->
                         if (key == TopLevelFabKey.PLAYLISTS) fabState = state
                     },
                 ) {
                     PlaylistListScreenContent(
                         state = PlaylistListUiState(
-                            playlistsDataState = DataState.Success(value = emptyList()),
+                            playlistsDataState = DataState.Success(emptyList()),
                         ),
                         onAction = actions::add,
                     )
@@ -52,12 +52,9 @@ class PlaylistListScreenTest {
             }
         }
 
-        composeRule.runOnIdle { checkNotNull(value = fabState).onClick() }
+        composeRule.runOnIdle { checkNotNull(fabState).onClick() }
 
-        assertEquals(
-            listOf(element = PlaylistUiAction.ShowCreationChooser),
-            actions,
-        )
+        assertEquals(listOf(PlaylistUiAction.ShowCreationChooser), actions)
     }
 
     @Test
@@ -68,7 +65,7 @@ class PlaylistListScreenTest {
             NextPlayerTheme {
                 PlaylistListScreenContent(
                     state = PlaylistListUiState(
-                        playlistsDataState = DataState.Success(value = emptyList()),
+                        playlistsDataState = DataState.Success(emptyList()),
                         creationDialog = PlaylistCreationDialog.LOCAL_NAME,
                     ),
                     onAction = actions::add,
@@ -76,19 +73,16 @@ class PlaylistListScreenTest {
             }
         }
 
-        val nameField = composeRule.onNodeWithText(text = "Playlist name")
+        val nameField = composeRule.onNodeWithText("Playlist name")
         // On TV the field is selected but read-only until the remote activates it.
         if (ApplicationProvider.getApplicationContext<Context>().isTelevision) {
             nameField.performKeyInput { pressKey(Key.DirectionCenter) }
         }
-        nameField.performTextInput(text = "Movies")
-        composeRule.onNodeWithText(text = "Create").performClick()
+        nameField.performTextInput("Movies")
+        composeRule.onNodeWithText("Create").performClick()
 
-        assertEquals(
-            listOf(PlaylistUiAction.CreateLocal(name = "Movies")),
-            actions,
-        )
-        composeRule.onAllNodesWithText(text = "M3U URL").assertCountEquals(expectedSize = 0)
+        assertEquals(listOf(PlaylistUiAction.CreateLocal("Movies")), actions)
+        composeRule.onAllNodesWithText("M3U URL").assertCountEquals(0)
     }
 
     @Test
@@ -97,16 +91,16 @@ class PlaylistListScreenTest {
             NextPlayerTheme {
                 PlaylistListScreenContent(
                     state = PlaylistListUiState(
-                        playlistsDataState = DataState.Success(value = emptyList()),
+                        playlistsDataState = DataState.Success(emptyList()),
                         creationDialog = PlaylistCreationDialog.CHOOSER,
                     ),
                 )
             }
         }
 
-        composeRule.onNodeWithText(text = "Create local playlist").assertIsDisplayed()
-        composeRule.onNodeWithText(text = "Add M3U playlist from URL").assertIsDisplayed()
-        composeRule.onNodeWithText(text = "Add M3U playlist from file").assertIsDisplayed()
+        composeRule.onNodeWithText("Create local playlist").assertIsDisplayed()
+        composeRule.onNodeWithText("Add M3U playlist from URL").assertIsDisplayed()
+        composeRule.onNodeWithText("Add M3U playlist from file").assertIsDisplayed()
     }
 
     @Test
@@ -118,73 +112,20 @@ class PlaylistListScreenTest {
             NextPlayerTheme {
                 PlaylistListScreenContent(
                     state = PlaylistListUiState(
-                        playlistsDataState = DataState.Success(value = listOf(element = playlist)),
+                        playlistsDataState = DataState.Success(listOf(playlist)),
                     ),
                     onAction = actions::add,
                 )
             }
         }
 
-        composeRule.onNodeWithText(text = "Local · 2 videos").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription(label = "Playlist actions").performClick()
-        composeRule.onNodeWithText(text = "Rename playlist").assertIsDisplayed()
-        composeRule.onNodeWithText(text = "Delete").assertIsDisplayed()
-        composeRule.onNodeWithText(text = "Rename playlist").performClick()
+        composeRule.onNodeWithText("Local · 2 videos").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Playlist actions").performClick()
+        composeRule.onNodeWithText("Rename playlist").assertIsDisplayed()
+        composeRule.onNodeWithText("Delete").assertIsDisplayed()
+        composeRule.onNodeWithText("Rename playlist").performClick()
 
-        assertEquals(
-            listOf(PlaylistUiAction.ShowRenameDialogFor(playlist = playlist)),
-            actions,
-        )
-    }
-
-    @Test
-    fun shortcutActionUsesTheSelectedPlaylist() {
-        val playlist = playlistSummary()
-        var selectedPlaylist: PlaylistSummary? = null
-        composeRule.setContent {
-            NextPlayerTheme {
-                PlaylistListScreenContent(
-                    state = PlaylistListUiState(
-                        playlistsDataState = DataState.Success(value = listOf(element = playlist)),
-                    ),
-                    onAddToHomeScreen = { selectedPlaylist = it },
-                )
-            }
-        }
-
-        composeRule.onNodeWithContentDescription(label = "Playlist actions").performClick()
-        composeRule.onNodeWithText(text = "Add to home screen").performClick()
-
-        composeRule.runOnIdle {
-            assertEquals(
-                playlist,
-                selectedPlaylist,
-            )
-        }
-        composeRule.onAllNodesWithText(
-            text = "Add to home screen",
-        ).assertCountEquals(expectedSize = 0)
-    }
-
-    @Test
-    fun unsupportedLaunchersDoNotOfferShortcutAction() {
-        composeRule.setContent {
-            NextPlayerTheme {
-                PlaylistListScreenContent(
-                    state = PlaylistListUiState(
-                        playlistsDataState = DataState.Success(
-                            value = listOf(element = playlistSummary()),
-                        ),
-                    ),
-                )
-            }
-        }
-
-        composeRule.onNodeWithContentDescription(label = "Playlist actions").performClick()
-
-        composeRule.onAllNodesWithText(
-            text = "Add to home screen",
-        ).assertCountEquals(expectedSize = 0)
+        assertEquals(listOf(PlaylistUiAction.ShowRenameDialogFor(playlist)), actions)
     }
 
     @Test
@@ -196,7 +137,7 @@ class PlaylistListScreenTest {
             NextPlayerTheme {
                 PlaylistListScreenContent(
                     state = PlaylistListUiState(
-                        playlistsDataState = DataState.Success(value = listOf(element = playlist)),
+                        playlistsDataState = DataState.Success(listOf(playlist)),
                         showDeleteDialogFor = playlist,
                     ),
                     onAction = actions::add,
@@ -204,12 +145,9 @@ class PlaylistListScreenTest {
             }
         }
 
-        composeRule.onNodeWithText(text = "Delete").performClick()
+        composeRule.onNodeWithText("Delete").performClick()
 
-        assertEquals(
-            listOf(PlaylistUiAction.Delete(playlist.id)),
-            actions,
-        )
+        assertEquals(listOf(PlaylistUiAction.Delete(playlist.id)), actions)
     }
 
     @Test
@@ -218,13 +156,13 @@ class PlaylistListScreenTest {
             NextPlayerTheme {
                 PlaylistListScreenContent(
                     state = PlaylistListUiState(
-                        playlistsDataState = DataState.Success(value = emptyList()),
+                        playlistsDataState = DataState.Success(emptyList()),
                     ),
                 )
             }
         }
 
-        composeRule.onNodeWithText(text = "No playlists yet").assertIsDisplayed()
+        composeRule.onNodeWithText("No playlists yet").assertIsDisplayed()
     }
 }
 

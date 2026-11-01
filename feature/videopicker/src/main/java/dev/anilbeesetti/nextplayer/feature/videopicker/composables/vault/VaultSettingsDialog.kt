@@ -19,20 +19,16 @@ internal fun VaultSettingsDialog(
     onDismiss: () -> Unit,
 ) {
     val available = rememberVaultBiometricAvailable()
-    var authenticating by rememberSaveable { mutableStateOf(value = false) }
+    var authenticating by rememberSaveable { mutableStateOf(false) }
 
     NextDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = stringResource(R.string.vault_settings)) },
+        title = { Text(stringResource(R.string.vault_settings)) },
         content = {
             PreferenceSwitch(
                 title = stringResource(R.string.unlock_with_biometrics),
                 description = stringResource(
-                    id = if (available || biometricEnabled) {
-                        R.string.vault_biometric_description
-                    } else {
-                        R.string.vault_biometric_unavailable
-                    },
+                    if (available || biometricEnabled) R.string.vault_biometric_description else R.string.vault_biometric_unavailable,
                 ),
                 isChecked = biometricEnabled,
                 enabled = !authenticating && (biometricEnabled || available),
@@ -44,7 +40,9 @@ internal fun VaultSettingsDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.done)) }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.done))
+            }
         },
     )
 

@@ -13,16 +13,19 @@ data class PlayerPreferences(
     val playerVideoZoom: VideoContentScale = VideoContentScale.BEST_FIT,
     val defaultPlaybackSpeed: Float = 1.0f,
     val autoplay: Boolean = true,
+    val autoSkipIntroOutro: Boolean = false,
+    val customSkipIntroOutro: Boolean = false,
+    val customIntroSeconds: Int = 0,
+    val customOutroSeconds: Int = 0,
     val enableTunneledPlayback: Boolean = false,
+    val frameInterpolationEnabled: Boolean = false,
+    val frameInterpolationTargetFps: Int = 60,
     val autoPip: Boolean = true,
     val autoBackgroundPlay: Boolean = false,
     val loopMode: LoopMode = LoopMode.OFF,
 
     // Controls (Gestures)
-    @Deprecated(
-        message =
-            "Use individual enableVolumeSwipeGesture and enableBrightnessSwipeGesture instead",
-    )
+    @Deprecated(message = "Use individual enableVolumeSwipeGesture and enableBrightnessSwipeGesture instead")
     val useSwipeControls: Boolean = true,
     val enableVolumeSwipeGesture: Boolean = true,
     val enableBrightnessSwipeGesture: Boolean = true,
@@ -63,6 +66,7 @@ data class PlayerPreferences(
 ) {
 
     companion object {
+        const val MAX_CUSTOM_SKIP_SECONDS = 1800
         const val DEFAULT_SEEK_INCREMENT = 10
         const val DEFAULT_SEEK_SENSITIVITY = 0.50f
         const val DEFAULT_VOLUME_GESTURE_SENSITIVITY = 0.50f

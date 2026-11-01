@@ -31,8 +31,7 @@ class MoreScreenFocusTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
-    private val state =
-        mutableStateOf(value = MoreUiState(history = DataState.Success(value = clips)))
+    private val state = mutableStateOf(MoreUiState(history = DataState.Success(clips)))
 
     @Before
     fun requireTv() {
@@ -42,67 +41,59 @@ class MoreScreenFocusTest {
     @Test
     fun enteringMoreFocusesVault() {
         showMore()
-        composeRule.onNodeWithText(text = "Vault").assertIsFocused()
+        composeRule.onNodeWithText("Vault").assertIsFocused()
     }
 
     @Test
     fun emptyHistoryKeepsTheFirstActionFocused() {
-        showMore(history = emptyList())
-        composeRule.onNodeWithText(text = "Vault").assertIsFocused()
-        composeRule.onNodeWithContentDescription(label = "History").assertExists()
+        showMore(emptyList())
+        composeRule.onNodeWithText("Vault").assertIsFocused()
+        composeRule.onNodeWithContentDescription("History").assertExists()
     }
 
     @Test
     fun downFromTrashVisitsHistoryArrowBeforeVideos() {
         showMore()
-        composeRule.onNodeWithText(text = "Trash").requestFocus()
+        composeRule.onNodeWithText("Trash").requestFocus()
         press(Key.DirectionDown)
-        composeRule.onNodeWithContentDescription(label = "History").assertIsFocused()
+        composeRule.onNodeWithContentDescription("History").assertIsFocused()
         press(Key.DirectionDown)
-        composeRule.onNodeWithText(text = "Clip 01").assertIsFocused()
+        composeRule.onNodeWithText("Clip 01").assertIsFocused()
     }
 
     @Test
     fun downFromPickFileVisitsHistoryArrow() {
         showMore()
-        composeRule.onNodeWithText(text = "Pick file").requestFocus()
+        composeRule.onNodeWithText("Pick file").requestFocus()
         press(Key.DirectionDown)
-        composeRule.onNodeWithContentDescription(label = "History").assertIsFocused()
+        composeRule.onNodeWithContentDescription("History").assertIsFocused()
     }
 
     @Test
     fun upFromVideoVisitsHistoryArrowAndDownRestoresTheVideo() {
         showMore()
-        composeRule.onNodeWithText(text = "Clip 02").requestFocus()
+        composeRule.onNodeWithText("Clip 02").requestFocus()
         press(Key.DirectionUp)
-        composeRule.onNodeWithContentDescription(label = "History").assertIsFocused()
+        composeRule.onNodeWithContentDescription("History").assertIsFocused()
         press(Key.DirectionDown)
-        composeRule.onNodeWithText(text = "Clip 02").assertIsFocused()
+        composeRule.onNodeWithText("Clip 02").assertIsFocused()
     }
 
     @Test
     fun historyUpdatesDoNotStealFocusFromActions() {
-        showMore(history = emptyList())
-        composeRule.onNodeWithText(text = "Pick file").requestFocus()
-        composeRule.runOnIdle {
-            state.value =
-                MoreUiState(history = DataState.Success(clips.reversed()))
-        }
-        composeRule.onNodeWithText(text = "Pick file").assertIsFocused()
+        showMore(emptyList())
+        composeRule.onNodeWithText("Pick file").requestFocus()
+        composeRule.runOnIdle { state.value = MoreUiState(history = DataState.Success(clips.reversed())) }
+        composeRule.onNodeWithText("Pick file").assertIsFocused()
     }
 
     @Test
     fun upFromHistoryArrowReturnsToTopActions() {
         showMore()
-        composeRule.onNodeWithContentDescription(label = "History").requestFocus()
+        composeRule.onNodeWithContentDescription("History").requestFocus()
         press(Key.DirectionUp)
         composeRule.onNode(
-            matcher =
-                isFocused() and
-                    (
-                        hasText(text = "Vault") or hasText(text = "Pick file") or
-                            hasText(text = "Trash")
-                        ),
+            isFocused() and (hasText("Vault") or hasText("Pick file") or hasText("Trash")),
         ).assertExists()
     }
 
@@ -110,29 +101,24 @@ class MoreScreenFocusTest {
     fun tabVisitsHistoryArrowBetweenActionsAndVideos() {
         showMore()
         press(Key.Tab)
-        composeRule.onNodeWithText(text = "Pick file").assertIsFocused()
+        composeRule.onNodeWithText("Pick file").assertIsFocused()
         press(Key.Tab)
-        composeRule.onNodeWithText(text = "Trash").assertIsFocused()
+        composeRule.onNodeWithText("Trash").assertIsFocused()
         press(Key.Tab)
-        composeRule.onNodeWithContentDescription(label = "History").assertIsFocused()
+        composeRule.onNodeWithContentDescription("History").assertIsFocused()
         press(Key.Tab)
-        composeRule.onNodeWithText(text = "Clip 01").assertIsFocused()
+        composeRule.onNodeWithText("Clip 01").assertIsFocused()
     }
 
     private fun showMore(history: List<Video> = clips) {
-        state.value = MoreUiState(history = DataState.Success(value = history))
+        state.value = MoreUiState(history = DataState.Success(history))
         composeRule.setContent {
-            NextPlayerTheme {
-                MoreScreenContent(
-                    state = state.value,
-                    onAction = {},
-                )
-            }
+            NextPlayerTheme { MoreScreenContent(state = state.value, onAction = {}) }
         }
     }
 
     private fun press(key: Key) {
-        composeRule.onRoot().performKeyInput { pressKey(key = key) }
+        composeRule.onRoot().performKeyInput { pressKey(key) }
     }
 }
 

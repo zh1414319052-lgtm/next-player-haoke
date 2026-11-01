@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 
@@ -33,7 +34,10 @@ fun NextSegmentedListItem(
     isFirstItem: Boolean = false,
     isLastItem: Boolean = false,
     contentPadding: PaddingValues = PaddingValues(16.dp),
-    colors: ListItemColors = ListItemDefaults.segmentedColors(),
+    colors: ListItemColors = ListItemDefaults.segmentedColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        supportingContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    ),
     shapes: ListItemShapes = ListItemDefaults.shapes(),
     leadingContent: @Composable (() -> Unit)? = null,
     trailingContent: @Composable (() -> Unit)? = null,
@@ -48,17 +52,14 @@ fun NextSegmentedListItem(
 
     val focusInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
     val isFocused by focusInteractionSource.collectIsFocusedAsState()
-    val focusScale by animateFloatAsState(
-        targetValue = if (isFocused) 1.01f else 1f,
-        label = "focusScale",
-    )
+    val focusScale by animateFloatAsState(targetValue = if (isFocused) 1.01f else 1f, label = "focusScale")
 
     SegmentedListItem(
         modifier = modifier
-            .zIndex(zIndex = if (isFocused) 1f else 0f)
-            .scale(scale = focusScale)
+            .zIndex(if (isFocused) 1f else 0f)
+            .scale(focusScale)
             .then(
-                other = if (isFocused) {
+                if (isFocused) {
                     Modifier.border(
                         width = 2.dp,
                         color = MaterialTheme.colorScheme.primary,
@@ -73,26 +74,15 @@ fun NextSegmentedListItem(
         onLongClick = onLongClick,
         enabled = enabled,
         verticalAlignment = Alignment.CenterVertically,
-        shapes = remember(
-            isFirstItem,
-            isLastItem,
-            shapes,
-        ) {
+        shapes = remember(isFirstItem, isLastItem, shapes) {
             val defaultBaseShape = shapes.shape
             if (defaultBaseShape is CornerBasedShape) {
                 shapes.copy(
                     shape = defaultBaseShape.copy(
-                        topStart =
-                            overrideShape.topStart.takeIf { isFirstItem }
-                                ?: defaultBaseShape.topStart,
-                        topEnd =
-                            overrideShape.topEnd.takeIf { isFirstItem } ?: defaultBaseShape.topEnd,
-                        bottomStart =
-                            overrideShape.bottomStart.takeIf { isLastItem }
-                                ?: defaultBaseShape.bottomStart,
-                        bottomEnd =
-                            overrideShape.bottomEnd.takeIf { isLastItem }
-                                ?: defaultBaseShape.bottomEnd,
+                        topStart = overrideShape.topStart.takeIf { isFirstItem } ?: defaultBaseShape.topStart,
+                        topEnd = overrideShape.topEnd.takeIf { isFirstItem } ?: defaultBaseShape.topEnd,
+                        bottomStart = overrideShape.bottomStart.takeIf { isLastItem } ?: defaultBaseShape.bottomStart,
+                        bottomEnd = overrideShape.bottomEnd.takeIf { isLastItem } ?: defaultBaseShape.bottomEnd,
                     ),
                 )
             } else {
@@ -115,16 +105,17 @@ fun ListSectionTitle(
     modifier: Modifier = Modifier,
     text: String,
     contentPadding: PaddingValues = PaddingValues(
-        start = 12.dp,
-        top = 20.dp,
-        bottom = 10.dp,
+        start = 4.dp,
+        top = 24.dp,
+        bottom = 12.dp,
     ),
-    color: Color = MaterialTheme.colorScheme.primary,
+    color: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     Text(
         text = text,
-        modifier = modifier.padding(paddingValues = contentPadding),
+        modifier = modifier.padding(contentPadding),
         color = color,
-        style = MaterialTheme.typography.labelLarge,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
     )
 }

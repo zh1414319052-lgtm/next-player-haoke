@@ -32,16 +32,14 @@ class ControlsTopViewTest {
         composeRule.setContent {
             NextPlayerTheme {
                 ControlsTopView(
-                    modifier = Modifier.focusRequester(focusRequester = groupFocusRequester),
+                    modifier = Modifier.focusRequester(groupFocusRequester),
                     title = "Video",
                     videoDecoderMode = null,
                     onBackClick = { backClicked = true },
                 )
             }
         }
-        val decoder = composeRule.onNodeWithContentDescription(
-            composeRule.activity.getString(R.string.select_decoders),
-        )
+        val decoder = composeRule.onNodeWithContentDescription(composeRule.activity.getString(R.string.select_decoders))
 
         composeRule.runOnIdle { groupFocusRequester.requestFocus() }
         decoder.assertIsFocused().performKeyInput {

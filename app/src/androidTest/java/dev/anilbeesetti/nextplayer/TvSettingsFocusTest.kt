@@ -36,7 +36,7 @@ class TvSettingsFocusTest {
     @Before
     fun openSettings() {
         assumeTrue(composeRule.activity.isTelevision)
-        composeRule.onNodeWithContentDescription(label = text(R.string.settings)).performClick()
+        composeRule.onNodeWithContentDescription(text(R.string.settings)).performClick()
         focused(R.string.appearance_name)
     }
 
@@ -62,9 +62,7 @@ class TvSettingsFocusTest {
         press(Key.DirectionDown)
         focused(R.string.thumbnail_generation)
         press(Key.DirectionCenter)
-        composeRule.onNodeWithContentDescription(
-            label = text(R.string.navigate_up),
-        ).assertIsDisplayed()
+        composeRule.onNodeWithContentDescription(text(R.string.navigate_up)).assertIsDisplayed()
         press(Key.Back)
         focused(R.string.thumbnail_generation)
         press(Key.Back)
@@ -84,16 +82,15 @@ class TvSettingsFocusTest {
             R.string.about_name,
         )
         rows.forEachIndexed { index, row ->
-            focused(id = row)
+            focused(row)
             press(Key.DirectionCenter)
-            composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.waitUntil(5_000) {
                 composeRule.onAllNodes(
-                    matcher = isFocused() and hasClickAction() and
-                        !hasContentDescription(value = text(R.string.navigate_up)),
+                    isFocused() and hasClickAction() and !hasContentDescription(text(R.string.navigate_up)),
                 ).fetchSemanticsNodes().size == 1
             }
             press(Key.Back)
-            focused(id = row)
+            focused(row)
             if (index < rows.lastIndex) press(Key.DirectionDown)
         }
     }
@@ -110,15 +107,12 @@ class TvSettingsFocusTest {
 
     private fun focused(id: Int) {
         try {
-            composeRule.waitUntil(timeoutMillis = 5_000) {
-                composeRule.onAllNodes(matcher = hasText(text = text(id = id)) and isFocused())
+            composeRule.waitUntil(5_000) {
+                composeRule.onAllNodes(hasText(text(id)) and isFocused())
                     .fetchSemanticsNodes().size == 1
             }
         } catch (failure: Throwable) {
-            throw AssertionError(
-                "Expected focus on ${text(id = id)}\n${composeRule.onRoot().printToString()}",
-                failure,
-            )
+            throw AssertionError("Expected focus on ${text(id)}\n${composeRule.onRoot().printToString()}", failure)
         }
     }
 
@@ -126,7 +120,7 @@ class TvSettingsFocusTest {
         if (key == Key.Back) {
             pressBack()
         } else {
-            composeRule.onRoot().performKeyInput { pressKey(key = key) }
+            composeRule.onRoot().performKeyInput { pressKey(key) }
         }
         composeRule.waitForIdle()
     }

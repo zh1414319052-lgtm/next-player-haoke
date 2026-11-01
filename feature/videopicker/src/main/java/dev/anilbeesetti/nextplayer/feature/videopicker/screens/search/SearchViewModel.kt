@@ -38,10 +38,10 @@ class SearchViewModel(
         val openFolder: (String) -> Unit,
     )
 
-    private val stateInternal = MutableStateFlow(value = SearchUiState())
+    private val stateInternal = MutableStateFlow(SearchUiState())
     override val state: StateFlow<SearchUiState> = stateInternal.asStateFlow()
 
-    private val searchQuery = MutableStateFlow(value = "")
+    private val searchQuery = MutableStateFlow("")
 
     init {
         collectSearchHistory()
@@ -74,15 +74,14 @@ class SearchViewModel(
         }
     }
 
-    @OptIn(
-        FlowPreview::class,
-        ExperimentalCoroutinesApi::class,
-    )
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     private fun collectSearchResults() {
         viewModelScope.launch {
             searchQuery
-                .debounce(timeoutMillis = SEARCH_DEBOUNCE_MS)
-                .flatMapLatest { query -> searchMediaUseCase(query) }
+                .debounce(SEARCH_DEBOUNCE_MS)
+                .flatMapLatest { query ->
+                    searchMediaUseCase(query)
+                }
                 .collect { results ->
                     stateInternal.update {
                         it.copy(
@@ -99,6 +98,7 @@ class SearchViewModel(
             is SearchUiEvent.NavigateUp -> output.navigateUp()
             is SearchUiEvent.PlayVideo -> output.playVideo(action.uri)
             is SearchUiEvent.OpenFolder -> output.openFolder(action.path)
+
             is SearchUiEvent.OnQueryChange -> onQueryChange(action.query)
             is SearchUiEvent.OnSearch -> onSearch(action.query)
             is SearchUiEvent.OnHistoryItemClick -> onHistoryItemClick(action.query)
@@ -108,37 +108,33 @@ class SearchViewModel(
     }
 
     private fun onQueryChange(query: String) {
-        stateInternal.update {
-            it.copy(
-                query = query,
-                isSearching = query.isNotBlank(),
-            )
-        }
+        stateInternal.update { it.copy(query = query, isSearching = query.isNotBlank()) }
         searchQuery.value = query
     }
 
     private fun onSearch(query: String) {
         if (query.isBlank()) return
-        viewModelScope.launch { searchHistoryRepository.addSearchQuery(query = query) }
+        viewModelScope.launch {
+            searchHistoryRepository.addSearchQuery(query)
+        }
     }
 
     private fun onHistoryItemClick(query: String) {
-        stateInternal.update {
-            it.copy(
-                query = query,
-                isSearching = true,
-            )
-        }
+        stateInternal.update { it.copy(query = query, isSearching = true) }
         searchQuery.value = query
-        onSearch(query = query)
+        onSearch(query)
     }
 
     private fun removeHistoryItem(query: String) {
-        viewModelScope.launch { searchHistoryRepository.removeSearchQuery(query = query) }
+        viewModelScope.launch {
+            searchHistoryRepository.removeSearchQuery(query)
+        }
     }
 
     private fun clearHistory() {
-        viewModelScope.launch { searchHistoryRepository.clearHistory() }
+        viewModelScope.launch {
+            searchHistoryRepository.clearHistory()
+        }
     }
 
     companion object {

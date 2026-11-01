@@ -16,18 +16,20 @@ import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
 
 @Single
-class LocalPlaylistRepository(private val playlistDao: PlaylistDao) : PlaylistRepository {
+class LocalPlaylistRepository(
+    private val playlistDao: PlaylistDao,
+) : PlaylistRepository {
 
     override fun observePlaylists(): Flow<List<PlaylistSummary>> =
         playlistDao.observeSummaries().map { summaries ->
-            summaries.map(transform = PlaylistSummaryEntity::toModel)
+            summaries.map(PlaylistSummaryEntity::toModel)
         }
 
     override fun observePlaylist(playlistId: Long): Flow<PlaylistRecord?> =
-        playlistDao.observePlaylist(playlistId = playlistId).map { it?.toModel() }
+        playlistDao.observePlaylist(playlistId).map { it?.toModel() }
 
     override suspend fun getPlaylist(playlistId: Long): PlaylistRecord? =
-        playlistDao.getPlaylist(playlistId = playlistId)?.toModel()
+        playlistDao.getPlaylist(playlistId)?.toModel()
 
     override suspend fun create(name: String, videoUris: List<String>): Long =
         playlistDao.createPlaylist(
@@ -39,12 +41,14 @@ class LocalPlaylistRepository(private val playlistDao: PlaylistDao) : PlaylistRe
         type: PlaylistType,
         source: String,
         playlist: M3UPlaylist,
+        displayName: String?,
     ): Long {
-        require(value = type == PlaylistType.M3U_URL || type == PlaylistType.M3U_FILE)
+        require(type == PlaylistType.M3U_URL || type == PlaylistType.M3U_FILE)
         val refreshedAt = System.currentTimeMillis()
+        val name = displayName?.takeIf { it.isNotBlank() } ?: playlist.playlistName
         return playlistDao.createM3UPlaylist(
             playlist = PlaylistEntity(
-                name = playlist.playlistName.validatedName(),
+                name = name.validatedName(),
                 type = type.name,
                 source = source,
                 lastRefreshedAt = refreshedAt,
@@ -53,47 +57,38 @@ class LocalPlaylistRepository(private val playlistDao: PlaylistDao) : PlaylistRe
         )
     }
 
-    override suspend fun replaceM3UItems(playlistId: Long, items: List<M3UPlaylistItem>) {
+    override suspend fun replaceM3UItems(
+        playlistId: Long,
+        items: List<M3UPlaylistItem>,
+    ) {
         playlistDao.replaceM3UItems(
             playlistId = playlistId,
-            items = items.toEntities(playlistId = playlistId),
+            items = items.toEntities(playlistId),
             refreshedAt = System.currentTimeMillis(),
         )
     }
 
     override suspend fun rename(playlistId: Long, name: String) {
-        playlistDao.renamePlaylist(
-            playlistId = playlistId,
-            name.validatedName(),
-        )
+        playlistDao.renamePlaylist(playlistId, name.validatedName())
     }
 
     override suspend fun delete(playlistId: Long) {
-        playlistDao.deletePlaylist(playlistId = playlistId)
+        playlistDao.deletePlaylist(playlistId)
     }
 
     override suspend fun addVideos(playlistId: Long, videoUris: List<String>): Int {
-        playlistDao.requireLocalPlaylist(playlistId = playlistId)
-        return playlistDao.addItems(
-            playlistId = playlistId,
-            videoUris.distinct(),
-        )
+        playlistDao.requireLocalPlaylist(playlistId)
+        return playlistDao.addItems(playlistId, videoUris.distinct())
     }
 
     override suspend fun removeVideo(playlistId: Long, videoUri: String) {
-        playlistDao.requireLocalPlaylist(playlistId = playlistId)
-        playlistDao.removeItem(
-            playlistId = playlistId,
-            uri = videoUri,
-        )
+        playlistDao.requireLocalPlaylist(playlistId)
+        playlistDao.removeItem(playlistId, videoUri)
     }
 
     override suspend fun replaceOrder(playlistId: Long, orderedUris: List<String>) {
-        playlistDao.requireLocalPlaylist(playlistId = playlistId)
-        playlistDao.replaceOrder(
-            playlistId = playlistId,
-            orderedUris = orderedUris,
-        )
+        playlistDao.requireLocalPlaylist(playlistId)
+        playlistDao.replaceOrder(playlistId, orderedUris)
     }
 
     override suspend fun markVideoPlayed(playlistId: Long, videoUri: String) {
@@ -105,10 +100,7 @@ class LocalPlaylistRepository(private val playlistDao: PlaylistDao) : PlaylistRe
     }
 
     override suspend fun countFilePlaylistsBySource(source: String): Int =
-        playlistDao.countPlaylistsByTypeAndSource(
-            PlaylistType.M3U_FILE.name,
-            source = source,
-        )
+        playlistDao.countPlaylistsByTypeAndSource(PlaylistType.M3U_FILE.name, source)
 }
 
 private fun String.validatedName(): String =
@@ -117,7 +109,7 @@ private fun String.validatedName(): String =
 private fun PlaylistSummaryEntity.toModel() = PlaylistSummary(
     id = id,
     name = name,
-    type = PlaylistType.valueOf(value = type),
+    type = PlaylistType.valueOf(type),
     itemCount = itemCount,
     lastRefreshedAt = lastRefreshedAt,
 )

@@ -14,7 +14,7 @@ import org.koin.core.parameter.parametersOf
 object GeneralPreferencesRoute : NavKey
 
 fun NavBackStack<NavKey>.navigateToGeneralPreferences() {
-    add(element = GeneralPreferencesRoute)
+    add(GeneralPreferencesRoute)
 }
 
 fun EntryProviderScope<NavKey>.generalPreferencesEntry(onNavigateUp: () -> Unit) {

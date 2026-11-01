@@ -62,7 +62,9 @@ import dev.anilbeesetti.nextplayer.core.ui.extensions.copy
 import dev.anilbeesetti.nextplayer.core.ui.theme.NextPlayerTheme
 
 @Composable
-fun NetworkScreen(viewModel: NetworkViewModel) {
+fun NetworkScreen(
+    viewModel: NetworkViewModel,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     NetworkScreenContent(
@@ -71,10 +73,15 @@ fun NetworkScreen(viewModel: NetworkViewModel) {
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal fun NetworkScreenContent(state: NetworkUiState, onAction: (NetworkAction) -> Unit) {
-    var connectionToDelete by remember { mutableStateOf<NetworkConnection?>(value = null) }
-    var streamUrl by rememberSaveable { mutableStateOf(value = "") }
+internal fun NetworkScreenContent(
+    state: NetworkUiState,
+    onAction: (NetworkAction) -> Unit,
+) {
+    var connectionToDelete by remember { mutableStateOf<NetworkConnection?>(null) }
+    var streamUrl by rememberSaveable { mutableStateOf("") }
+    var showStreamDialog by rememberSaveable { mutableStateOf(false) }
     val trimmedStreamUrl = streamUrl.trim()
     val fabUpFocusRequester = remember { FocusRequester() }
 
@@ -93,12 +100,7 @@ internal fun NetworkScreenContent(state: NetworkUiState, onAction: (NetworkActio
                 title = stringResource(R.string.network),
                 fontWeight = FontWeight.Bold,
                 actions = {
-                    IconButton(
-                        onClick = {
-                            onAction(NetworkAction.OpenSettings)
-                        },
-                        modifier = Modifier.tvFocusRing(),
-                    ) {
+                    IconButton(onClick = { onAction(NetworkAction.OpenSettings) }, modifier = Modifier.tvFocusRing()) {
                         Icon(
                             imageVector = NextIcons.Settings,
                             contentDescription = stringResource(R.string.settings),
@@ -107,18 +109,13 @@ internal fun NetworkScreenContent(state: NetworkUiState, onAction: (NetworkActio
                 },
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { scaffoldPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(scaffoldPadding.copy(bottom = 0.dp))
-                .clip(
-                    shape = RoundedCornerShape(
-                        topStart = 24.dp,
-                        topEnd = 24.dp,
-                    ),
-                )
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(MaterialTheme.colorScheme.background),
         ) {
             LazyColumn(
@@ -131,18 +128,24 @@ internal fun NetworkScreenContent(state: NetworkUiState, onAction: (NetworkActio
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 item {
-                    NetworkStreamCard(
-                        url = streamUrl,
-                        onUrlChange = { streamUrl = it },
-                        onOpenStream = {
-                            onAction(NetworkAction.OpenStream(trimmedStreamUrl.toUri()))
+                    NextSegmentedListItem(
+                        onClick = { showStreamDialog = true },
+                        modifier = Modifier.focusRequester(fabUpFocusRequester),
+                        leadingContent = {
+                            Icon(
+                                imageVector = NextIcons.Add,
+                                contentDescription = null,
+                            )
                         },
-                        enabled = trimmedStreamUrl.isNotEmpty(),
-                        fabUpFocusRequester = fabUpFocusRequester,
+                        content = {
+                            Text(text = stringResource(R.string.open_network_stream))
+                        },
                     )
                 }
                 if (showEmptyState) {
-                    item { NetworkEmptyState() }
+                    item {
+                        NetworkEmptyState()
+                    }
                 } else {
                     itemsIndexed(
                         items = state.connections,
@@ -165,78 +168,52 @@ internal fun NetworkScreenContent(state: NetworkUiState, onAction: (NetworkActio
     connectionToDelete?.let { connection ->
         NextDialog(
             onDismissRequest = { connectionToDelete = null },
-            title = { Text(text = stringResource(R.string.delete_connection)) },
-            content = {
-                Text(
-                    text = stringResource(
-                        R.string.delete_connection_confirmation,
-                        connection.name,
-                    ),
-                )
-            },
+            title = { Text(stringResource(R.string.delete_connection)) },
+            content = { Text(stringResource(R.string.delete_connection_confirmation, connection.name)) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         onAction(NetworkAction.DeleteConnection(connection.id))
                         connectionToDelete = null
                     },
-                ) { Text(text = stringResource(R.string.delete)) }
+                ) { Text(stringResource(R.string.delete)) }
             },
             dismissButton = {
                 TextButton(onClick = { connectionToDelete = null }) {
-                    Text(text = stringResource(R.string.cancel))
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )
     }
-}
 
-@Composable
-private fun NetworkStreamCard(
-    modifier: Modifier = Modifier,
-    url: String,
-    onUrlChange: (String) -> Unit,
-    onOpenStream: () -> Unit,
-    enabled: Boolean,
-    fabUpFocusRequester: FocusRequester,
-) {
-    Column(
-        modifier = modifier
-            .clip(shape = RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.network_stream),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
+    if (showStreamDialog) {
+        NextDialog(
+            onDismissRequest = { showStreamDialog = false },
+            title = { Text(stringResource(R.string.open_network_stream)) },
+            content = {
+                NextOutlinedTextField(
+                    value = streamUrl,
+                    onValueChange = { streamUrl = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(stringResource(R.string.example_url)) },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = trimmedStreamUrl.isNotEmpty(),
+                    onClick = {
+                        onAction(NetworkAction.OpenStream(trimmedStreamUrl.toUri()))
+                        showStreamDialog = false
+                    },
+                ) { Text(stringResource(R.string.play)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStreamDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
         )
-        Text(
-            text = stringResource(R.string.enter_a_network_url),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        NextOutlinedTextField(
-            value = url,
-            onValueChange = onUrlChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .thenIf(condition = !enabled) {
-                    focusRequester(focusRequester = fabUpFocusRequester)
-                },
-            placeholder = { Text(text = stringResource(R.string.example_url)) },
-            singleLine = true,
-        )
-        Button(
-            onClick = onOpenStream,
-            enabled = enabled,
-            modifier = Modifier
-                .align(Alignment.End)
-                .thenIf(condition = enabled) {
-                    focusRequester(focusRequester = fabUpFocusRequester)
-                },
-        ) { Text(text = stringResource(R.string.open_network_stream)) }
     }
 }
 
@@ -250,7 +227,7 @@ private fun ConnectionItem(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    var menuExpanded by rememberSaveable { mutableStateOf(value = false) }
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
 
     NextSegmentedListItem(
         contentPadding = PaddingValues(8.dp),
@@ -294,36 +271,20 @@ private fun ConnectionItem(
         trailingContent = {
             Box {
                 IconButton(onClick = { menuExpanded = true }) {
-                    Icon(
-                        NextIcons.ExtraSettings,
-                        contentDescription = null,
-                    )
+                    Icon(NextIcons.ExtraSettings, contentDescription = null)
                 }
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false },
-                ) {
+                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                     DropdownMenuItem(
-                        text = { Text(text = stringResource(R.string.edit)) },
-                        leadingIcon = {
-                            Icon(
-                                NextIcons.Edit,
-                                contentDescription = null,
-                            )
-                        },
+                        text = { Text(stringResource(R.string.edit)) },
+                        leadingIcon = { Icon(NextIcons.Edit, contentDescription = null) },
                         onClick = {
                             menuExpanded = false
                             onEdit()
                         },
                     )
                     DropdownMenuItem(
-                        text = { Text(text = stringResource(R.string.delete)) },
-                        leadingIcon = {
-                            Icon(
-                                NextIcons.Delete,
-                                contentDescription = null,
-                            )
-                        },
+                        text = { Text(stringResource(R.string.delete)) },
+                        leadingIcon = { Icon(NextIcons.Delete, contentDescription = null) },
                         onClick = {
                             menuExpanded = false
                             onDelete()
@@ -338,10 +299,7 @@ private fun ConnectionItem(
 @Composable
 private fun NetworkEmptyState(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier.padding(
-            horizontal = 32.dp,
-            vertical = 48.dp,
-        ),
+        modifier = modifier.padding(horizontal = 32.dp, vertical = 48.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -379,10 +337,7 @@ internal fun NetworkProtocol.icon(): ImageVector = when (this) {
 private fun NetworkScreenPreview() {
     NextPlayerTheme {
         NetworkScreenContent(
-            state = NetworkUiState(
-                connections = listOf(NetworkConnection.sample),
-                isLoading = false,
-            ),
+            state = NetworkUiState(connections = listOf(NetworkConnection.sample), isLoading = false),
             onAction = {},
         )
     }

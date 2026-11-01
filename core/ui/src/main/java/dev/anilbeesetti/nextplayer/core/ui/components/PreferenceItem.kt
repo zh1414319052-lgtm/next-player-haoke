@@ -1,6 +1,8 @@
 package dev.anilbeesetti.nextplayer.core.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Checkbox
@@ -10,7 +12,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
@@ -44,23 +48,33 @@ fun PreferenceItem(
         isLastItem = isLastItem,
         leadingContent = icon?.let {
             {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                )
+                Box(
+                    modifier = Modifier
+                        .size(32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
             }
         },
-        supportingContent = description?.let { { Text(text = description) } },
-        content = { Text(text = title) },
+        supportingContent = description?.let {
+            {
+                Text(text = description)
+            }
+        },
+        content = {
+            Text(text = title)
+        },
         trailingContent = trailingContent,
     )
 }
 
-@OptIn(
-    ExperimentalFoundationApi::class,
-    ExperimentalMaterial3ExpressiveApi::class,
-)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SelectablePreference(
     title: String,
@@ -83,11 +97,7 @@ fun SelectablePreference(
                 text = title,
                 maxLines = 1,
                 style = MaterialTheme.typography.titleMedium.copy(
-                    textDecoration = if (selected) {
-                        TextDecoration.LineThrough
-                    } else {
-                        TextDecoration.None
-                    },
+                    textDecoration = if (selected) TextDecoration.LineThrough else TextDecoration.None,
                 ),
             )
         },
@@ -97,11 +107,7 @@ fun SelectablePreference(
                     text = it,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        textDecoration = if (selected) {
-                            TextDecoration.LineThrough
-                        } else {
-                            TextDecoration.None
-                        },
+                        textDecoration = if (selected) TextDecoration.LineThrough else TextDecoration.None,
                     ),
                 )
             }
@@ -116,10 +122,7 @@ fun SelectablePreference(
     )
 }
 
-@OptIn(
-    ExperimentalFoundationApi::class,
-    ExperimentalMaterial3ExpressiveApi::class,
-)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SingleSelectablePreference(
     title: String,
@@ -180,5 +183,6 @@ fun SelectablePreferencePreview() {
     )
 }
 
-internal fun Color.applyAlpha(enabled: Boolean): Color =
-    if (enabled) this else this.copy(alpha = 0.6f)
+internal fun Color.applyAlpha(enabled: Boolean): Color {
+    return if (enabled) this else this.copy(alpha = 0.6f)
+}

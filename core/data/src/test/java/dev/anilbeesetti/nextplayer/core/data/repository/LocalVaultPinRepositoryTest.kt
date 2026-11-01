@@ -13,18 +13,12 @@ import org.robolectric.RuntimeEnvironment
 @RunWith(RobolectricTestRunner::class)
 class LocalVaultPinRepositoryTest {
     private val context = RuntimeEnvironment.getApplication()
-    private val repository = LocalVaultPinRepository(context = context)
+    private val repository = LocalVaultPinRepository(context)
 
     @Test
     fun `biometrics default to disabled for existing vaults`() = runTest {
-        context.getSharedPreferences(
-            "vault_security_prefs",
-            Context.MODE_PRIVATE,
-        ).edit {
-            putString(
-                "vault_pin_hash",
-                "existing hash",
-            )
+        context.getSharedPreferences("vault_security_prefs", Context.MODE_PRIVATE).edit {
+            putString("vault_pin_hash", "existing hash")
         }
 
         assertTrue(repository.hasPinSet())
@@ -33,26 +27,26 @@ class LocalVaultPinRepositoryTest {
 
     @Test
     fun `biometric choice persists across repository instances`() = runTest {
-        repository.setPin(pin = "1234")
-        repository.setBiometricEnabled(enabled = true)
-        val reopened = LocalVaultPinRepository(context = context)
+        repository.setPin("1234")
+        repository.setBiometricEnabled(true)
+        val reopened = LocalVaultPinRepository(context)
         assertTrue(reopened.isBiometricEnabled())
 
-        reopened.setBiometricEnabled(enabled = false)
+        reopened.setBiometricEnabled(false)
 
-        assertFalse(LocalVaultPinRepository(context = context).isBiometricEnabled())
-        assertTrue(repository.verifyPin(pin = "1234"))
+        assertFalse(LocalVaultPinRepository(context).isBiometricEnabled())
+        assertTrue(repository.verifyPin("1234"))
     }
 
     @Test
     fun `setting a new PIN requires a new biometric opt in`() = runTest {
-        repository.setPin(pin = "1234")
+        repository.setPin("1234")
         assertFalse(repository.isBiometricEnabled())
-        repository.setBiometricEnabled(enabled = true)
+        repository.setBiometricEnabled(true)
 
-        repository.setPin(pin = "5678")
+        repository.setPin("5678")
 
         assertFalse(repository.isBiometricEnabled())
-        assertTrue(repository.verifyPin(pin = "5678"))
+        assertTrue(repository.verifyPin("5678"))
     }
 }

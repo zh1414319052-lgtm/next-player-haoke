@@ -22,10 +22,12 @@ class FolderPreferencesViewModel(
     @InjectedParam internal var output: Output,
 ) : MviViewModel<FolderPreferencesUiState, FolderPreferencesUiEvent>() {
 
-    data class Output(val navigateUp: () -> Unit)
+    data class Output(
+        val navigateUp: () -> Unit,
+    )
 
     private val stateInternal = MutableStateFlow(
-        value = FolderPreferencesUiState(
+        FolderPreferencesUiState(
             preferences = preferencesRepository.applicationPreferences.value,
         ),
     )
@@ -35,7 +37,7 @@ class FolderPreferencesViewModel(
         viewModelScope.launch {
             mediaRepository.observeFolders().collect {
                 stateInternal.update { currentState ->
-                    currentState.copy(foldersDataState = DataState.Success(value = it))
+                    currentState.copy(foldersDataState = DataState.Success(it))
                 }
             }
         }
@@ -52,6 +54,7 @@ class FolderPreferencesViewModel(
     override fun onAction(action: FolderPreferencesUiEvent) {
         when (action) {
             is FolderPreferencesUiEvent.NavigateUp -> output.navigateUp()
+
             is FolderPreferencesUiEvent.UpdateExcludeList -> updateExcludeList(action.path)
         }
     }

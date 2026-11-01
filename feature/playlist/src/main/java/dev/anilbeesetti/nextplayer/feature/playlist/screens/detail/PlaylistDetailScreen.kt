@@ -90,7 +90,9 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
-fun PlaylistDetailScreen(viewModel: PlaylistDetailViewModel) {
+fun PlaylistDetailScreen(
+    viewModel: PlaylistDetailViewModel,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     PlaylistDetailScreenContent(
@@ -125,18 +127,12 @@ internal fun PlaylistDetailScreenContent(
     LaunchedEffect(state.isSearching) {
         if (state.isSearching) searchFocusRequester.requestFocus()
     }
-    LaunchedEffect(
-        key1 = isTv,
-        state.isReordering,
-    ) {
+    LaunchedEffect(isTv, state.isReordering) {
         if (isTv && state.isReordering) {
             onAction(PlaylistDetailUiAction.OnFinishReorderingClick)
         }
     }
-    BackHandler(
-        enabled = state.isSearching,
-        onBack = exitSearch,
-    )
+    BackHandler(enabled = state.isSearching, onBack = exitSearch)
 
     Scaffold(
         topBar = {
@@ -146,11 +142,11 @@ internal fun PlaylistDetailScreenContent(
                         NextOutlinedTextField(
                             value = state.searchQuery,
                             onValueChange = {
-                                onAction(PlaylistDetailUiAction.OnSearchQueryChange(query = it))
+                                onAction(PlaylistDetailUiAction.OnSearchQueryChange(it))
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .focusRequester(focusRequester = searchFocusRequester)
+                                .focusRequester(searchFocusRequester)
                                 .tvFocusRing(shape = CircleShape),
                             placeholder = {
                                 Text(
@@ -191,7 +187,9 @@ internal fun PlaylistDetailScreenContent(
                 },
                 navigationIcon = {
                     FilledTonalIconButton(
-                        onClick = { onAction(PlaylistDetailUiAction.OnNavigateUpClick) },
+                        onClick = {
+                            onAction(PlaylistDetailUiAction.OnNavigateUpClick)
+                        },
                         modifier = Modifier.tvFocusRing(),
                     ) {
                         Icon(
@@ -239,7 +237,9 @@ internal fun PlaylistDetailScreenContent(
                                 }
                             }
                             IconButton(
-                                onClick = { onAction(PlaylistDetailUiAction.OnSearchClick) },
+                                onClick = {
+                                    onAction(PlaylistDetailUiAction.OnSearchClick)
+                                },
                                 enabled = playlist != null,
                                 modifier = Modifier.tvFocusRing(),
                             ) {
@@ -250,16 +250,16 @@ internal fun PlaylistDetailScreenContent(
                             }
                             if (!isTv && playlist?.type == PlaylistType.LOCAL) {
                                 IconButton(
-                                    onClick = { onAction(PlaylistDetailUiAction.OnReorderClick) },
+                                    onClick = {
+                                        onAction(PlaylistDetailUiAction.OnReorderClick)
+                                    },
                                     enabled = videoUris.size > 1 &&
                                         !state.updateActionState.isRunning,
                                     modifier = Modifier.tvFocusRing(),
                                 ) {
                                     Icon(
                                         imageVector = NextIcons.Reorder,
-                                        contentDescription = stringResource(
-                                            R.string.reorder_playlist,
-                                        ),
+                                        contentDescription = stringResource(R.string.reorder_playlist),
                                     )
                                 }
                             }
@@ -273,7 +273,7 @@ internal fun PlaylistDetailScreenContent(
                 FloatingActionButton(
                     onClick = {
                         onAction(
-                            PlaylistDetailUiAction.OnPlay(startUri = playbackStartUri),
+                            PlaylistDetailUiAction.OnPlay(playbackStartUri),
                         )
                     },
                     modifier = Modifier
@@ -288,33 +288,25 @@ internal fun PlaylistDetailScreenContent(
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { scaffoldPadding ->
         val containerModifier = Modifier
             .fillMaxSize()
             .padding(scaffoldPadding.copy(bottom = 0.dp))
-            .clip(
-                shape = RoundedCornerShape(
-                    topStart = 24.dp,
-                    topEnd = 24.dp,
-                ),
-            )
+            .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
             .background(MaterialTheme.colorScheme.background)
 
         when (state.playlistDataState) {
             DataState.Loading ->
-                Box(
-                    modifier = containerModifier,
-                    contentAlignment = Alignment.Center,
-                ) {
+                Box(containerModifier, contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
 
-            is DataState.Error -> PlaylistUnavailable(modifier = containerModifier)
+            is DataState.Error -> PlaylistUnavailable(containerModifier)
 
             is DataState.Success -> {
                 if (playlist == null) {
-                    PlaylistUnavailable(modifier = containerModifier)
+                    PlaylistUnavailable(containerModifier)
                 } else {
                     val content: @Composable (Modifier) -> Unit = { modifier ->
                         PlaylistDetailContent(
@@ -339,7 +331,9 @@ internal fun PlaylistDetailScreenContent(
                             isRefreshing = state.isRefreshing,
                             onRefresh = { onAction(PlaylistDetailUiAction.Refresh) },
                             modifier = containerModifier,
-                        ) { content(Modifier.fillMaxSize()) }
+                        ) {
+                            content(Modifier.fillMaxSize())
+                        }
                     }
                 }
             }
@@ -349,8 +343,12 @@ internal fun PlaylistDetailScreenContent(
     state.showRemoveDialogFor?.let { item ->
         RemoveVideoDialog(
             item = item,
-            onConfirm = { onAction(PlaylistDetailUiAction.RemoveVideo(item.uri)) },
-            onDismissRequest = { onAction(PlaylistDetailUiAction.DismissRemoveDialog) },
+            onConfirm = {
+                onAction(PlaylistDetailUiAction.RemoveVideo(item.uri))
+            },
+            onDismissRequest = {
+                onAction(PlaylistDetailUiAction.DismissRemoveDialog)
+            },
         )
     }
 }
@@ -369,26 +367,17 @@ private fun PlaylistDetailContent(
     modifier: Modifier = Modifier,
 ) {
     var displayedItems by remember { mutableStateOf(playlist.items) }
-    var isDragging by remember { mutableStateOf(value = false) }
+    var isDragging by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val hapticFeedback = LocalHapticFeedback.current
-    val visibleItems = remember(
-        displayedItems,
-        searchQuery,
-    ) {
+    val visibleItems = remember(displayedItems, searchQuery) {
         val query = searchQuery.trim()
         if (query.isEmpty()) {
             displayedItems
         } else {
             displayedItems.filter { item ->
-                item.displayTitle.contains(
-                    other = query,
-                    ignoreCase = true,
-                ) ||
-                    item.supportingText.contains(
-                        other = query,
-                        ignoreCase = true,
-                    )
+                item.displayTitle.contains(query, ignoreCase = true) ||
+                    item.supportingText.contains(query, ignoreCase = true)
             }
         }
     }
@@ -397,12 +386,9 @@ private fun PlaylistDetailContent(
         if (!isDragging) displayedItems = playlist.items
     }
 
-    val reorderState = rememberReorderableLazyListState(lazyListState = listState) { from, to ->
+    val reorderState = rememberReorderableLazyListState(listState) { from, to ->
         displayedItems = displayedItems.toMutableList().apply {
-            add(
-                to.index,
-                element = removeAt(from.index),
-            )
+            add(to.index, removeAt(from.index))
         }
         hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
     }
@@ -417,14 +403,11 @@ private fun PlaylistDetailContent(
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(
-                        horizontal = 16.dp,
-                        vertical = 8.dp,
-                    ),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
         }
-        Box(modifier = Modifier.weight(weight = 1f)) {
+        Box(modifier = Modifier.weight(1f)) {
             if (displayedItems.isEmpty()) {
                 PlaylistEmptyState(Modifier.fillMaxSize())
             } else if (visibleItems.isEmpty()) {
@@ -433,7 +416,7 @@ private fun PlaylistDetailContent(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .tvListFocus(focusRequester = contentFocusRequester),
+                        .tvListFocus(contentFocusRequester),
                     state = listState,
                     contentPadding = PaddingValues(
                         start = 8.dp,
@@ -448,7 +431,9 @@ private fun PlaylistDetailContent(
                         items = visibleItems,
                         key = { _, item -> item.uri },
                     ) { index, item ->
-                        val onPlay = { onAction(PlaylistDetailUiAction.OnPlay(item.uri.toUri())) }
+                        val onPlay = {
+                            onAction(PlaylistDetailUiAction.OnPlay(item.uri.toUri()))
+                        }
                         if (isReordering && !isTv) {
                             ReorderableItem(
                                 state = reorderState,
@@ -499,9 +484,7 @@ private fun PlaylistDetailContent(
                                     },
                                     onClick = onPlay,
                                     onRemove = {
-                                        onAction(
-                                            PlaylistDetailUiAction.ShowRemoveDialogFor(item = item),
-                                        )
+                                        onAction(PlaylistDetailUiAction.ShowRemoveDialogFor(item))
                                     },
                                 )
                             }
@@ -516,9 +499,7 @@ private fun PlaylistDetailContent(
                                 actionsEnabled = actionsEnabled,
                                 onClick = onPlay,
                                 onRemove = {
-                                    onAction(
-                                        PlaylistDetailUiAction.ShowRemoveDialogFor(item = item),
-                                    )
+                                    onAction(PlaylistDetailUiAction.ShowRemoveDialogFor(item))
                                 },
                             )
                         }
@@ -537,10 +518,10 @@ private fun RemoveVideoDialog(
 ) {
     NextDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text(text = stringResource(R.string.remove_video)) },
+        title = { Text(stringResource(R.string.remove_video)) },
         content = {
             Text(
-                text = stringResource(
+                stringResource(
                     R.string.remove_video_confirmation,
                     item.displayTitle,
                 ),
@@ -550,13 +531,17 @@ private fun RemoveVideoDialog(
             TextButton(
                 onClick = onConfirm,
                 modifier = Modifier.tvFocusRing(),
-            ) { Text(text = stringResource(R.string.remove)) }
+            ) {
+                Text(stringResource(R.string.remove))
+            }
         },
         dismissButton = {
             TextButton(
                 onClick = onDismissRequest,
                 modifier = Modifier.tvFocusRing(),
-            ) { Text(text = stringResource(R.string.cancel)) }
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
         },
     )
 }
@@ -576,7 +561,7 @@ private fun PlaylistVideoRow(
     modifier: Modifier = Modifier,
     reorderHandle: (@Composable () -> Unit)? = null,
 ) {
-    var menuExpanded by rememberSaveable { mutableStateOf(value = false) }
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val rowFocusRequester = remember { FocusRequester() }
     val overflowFocusRequester = remember { FocusRequester() }
@@ -584,14 +569,11 @@ private fun PlaylistVideoRow(
     NextSegmentedListItem(
         modifier = modifier
             .fillMaxWidth()
-            .focusRequester(focusRequester = rowFocusRequester)
+            .focusRequester(rowFocusRequester)
             .focusProperties {
                 if (isTv) right = overflowFocusRequester
             },
-        contentPadding = PaddingValues(
-            horizontal = 12.dp,
-            vertical = 8.dp,
-        ),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
         isFirstItem = isFirstItem,
         isLastItem = isLastItem,
         onClick = if (isReordering) {
@@ -604,14 +586,8 @@ private fun PlaylistVideoRow(
                 reorderHandle?.invoke()
                 Box(
                     modifier = Modifier
-                        .width(
-                            width = min(
-                                100.dp,
-                                b =
-                                    LocalConfiguration.current.screenWidthDp.dp * 0.30f,
-                            ),
-                        )
-                        .aspectRatio(ratio = 16f / 10f)
+                        .width(min(100.dp, LocalConfiguration.current.screenWidthDp.dp * 0.30f))
+                        .aspectRatio(16f / 10f)
                         .clip(MaterialTheme.shapes.small)
                         .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)),
                 ) {
@@ -621,12 +597,12 @@ private fun PlaylistVideoRow(
                         tint = MaterialTheme.colorScheme.surfaceColorAtElevation(100.dp),
                         modifier = Modifier
                             .align(Alignment.Center)
-                            .fillMaxSize(fraction = 0.5f),
+                            .fillMaxSize(0.5f),
                     )
                     AsyncImage(
-                        model = ImageRequest.Builder(context = context)
-                            .data(data = item.tvgLogo ?: item.video?.uriString ?: item.uri)
-                            .crossfade(enable = true)
+                        model = ImageRequest.Builder(context)
+                            .data(item.tvgLogo ?: item.video?.uriString ?: item.uri)
+                            .crossfade(true)
                             .build(),
                         contentDescription = null,
                         contentScale = if (item.video != null) {
@@ -667,7 +643,7 @@ private fun PlaylistVideoRow(
                             onClick = { menuExpanded = true },
                             enabled = actionsEnabled,
                             modifier = Modifier
-                                .focusRequester(focusRequester = overflowFocusRequester)
+                                .focusRequester(overflowFocusRequester)
                                 .focusProperties {
                                     if (isTv) left = rowFocusRequester
                                 }
@@ -683,12 +659,9 @@ private fun PlaylistVideoRow(
                             onDismissRequest = { menuExpanded = false },
                         ) {
                             DropdownMenuItem(
-                                text = { Text(text = stringResource(R.string.remove)) },
+                                text = { Text(stringResource(R.string.remove)) },
                                 leadingIcon = {
-                                    Icon(
-                                        NextIcons.Delete,
-                                        contentDescription = null,
-                                    )
+                                    Icon(NextIcons.Delete, contentDescription = null)
                                 },
                                 onClick = {
                                     menuExpanded = false
@@ -751,10 +724,7 @@ private fun PlaylistSearchEmptyState(modifier: Modifier = Modifier) {
 
 @Composable
 private fun PlaylistUnavailable(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center,
-    ) {
+    Box(modifier, contentAlignment = Alignment.Center) {
         Text(
             text = stringResource(R.string.playlist_unavailable),
             color = MaterialTheme.colorScheme.onSurfaceVariant,

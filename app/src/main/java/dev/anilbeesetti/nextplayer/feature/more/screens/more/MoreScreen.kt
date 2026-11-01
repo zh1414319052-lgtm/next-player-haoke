@@ -3,6 +3,7 @@ package dev.anilbeesetti.nextplayer.feature.more.screens.more
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.anilbeesetti.nextplayer.core.common.extensions.isTelevision
 import dev.anilbeesetti.nextplayer.core.media.services.MediaOperationsService
@@ -48,10 +51,8 @@ import dev.anilbeesetti.nextplayer.core.model.ApplicationPreferences
 import dev.anilbeesetti.nextplayer.core.model.Video
 import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.core.ui.base.DataState
-import dev.anilbeesetti.nextplayer.core.ui.components.BindTopLevelFab
 import dev.anilbeesetti.nextplayer.core.ui.components.LocalNavigationBottomPadding
 import dev.anilbeesetti.nextplayer.core.ui.components.NextTopAppBar
-import dev.anilbeesetti.nextplayer.core.ui.components.TopLevelFabKey
 import dev.anilbeesetti.nextplayer.core.ui.components.rememberRestorableFocusState
 import dev.anilbeesetti.nextplayer.core.ui.components.restorableFocusGroup
 import dev.anilbeesetti.nextplayer.core.ui.components.restorableFocusItem
@@ -64,7 +65,9 @@ import dev.anilbeesetti.nextplayer.feature.more.components.HistoryEmptyState
 import dev.anilbeesetti.nextplayer.feature.videopicker.composables.VideoGridItem
 
 @Composable
-fun MoreScreen(viewModel: MoreViewModel) {
+fun MoreScreen(
+    viewModel: MoreViewModel,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     MoreScreenContent(
@@ -74,49 +77,42 @@ fun MoreScreen(viewModel: MoreViewModel) {
 }
 
 @Composable
-internal fun MoreScreenContent(state: MoreUiState, onAction: (MoreAction) -> Unit) {
-    BindTopLevelFab(
-        TopLevelFabKey.MORE,
-        NextIcons.Settings,
-    ) { onAction(MoreAction.OpenSettings) }
-    val filePicker =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            uri?.let { onAction(MoreAction.PlayVideo(it.toString())) }
-        }
+internal fun MoreScreenContent(
+    state: MoreUiState,
+    onAction: (MoreAction) -> Unit,
+) {
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { onAction(MoreAction.PlayVideo(it.toString())) }
+    }
 
     Scaffold(
         topBar = {
             NextTopAppBar(
                 title = stringResource(R.string.more),
                 fontWeight = FontWeight.Bold,
+                actions = {
+                    IconButton(onClick = { onAction(MoreAction.OpenSettings) }) {
+                        Icon(NextIcons.Settings, contentDescription = stringResource(R.string.settings))
+                    }
+                },
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { scaffoldPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(scaffoldPadding.copy(bottom = 0.dp))
-                .clip(
-                    shape = RoundedCornerShape(
-                        topStart = 24.dp,
-                        topEnd = 24.dp,
-                    ),
-                )
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(MaterialTheme.colorScheme.background),
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(state = rememberScrollState())
+                    .verticalScroll(rememberScrollState())
                     .tvListFocus()
-                    .padding(horizontal = 8.dp)
-                    .padding(
-                        top = 8.dp,
-                        bottom =
-                            scaffoldPadding.calculateBottomPadding() +
-                                LocalNavigationBottomPadding.current + 96.dp,
-                    ),
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 8.dp, bottom = scaffoldPadding.calculateBottomPadding() + LocalNavigationBottomPadding.current + 96.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 FlowRow(
@@ -125,45 +121,36 @@ internal fun MoreScreenContent(state: MoreUiState, onAction: (MoreAction) -> Uni
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     maxItemsInEachRow = 2,
                 ) {
-                    FilledTonalButton(
-                        modifier = Modifier.weight(weight = 1f).tvFocusRing(),
+                    CinemaToolTile(
+                        modifier = Modifier.weight(1f).tvFocusRing(),
                         onClick = { onAction(MoreAction.OpenVault) },
-                    ) {
-                        Icon(
-                            imageVector = NextIcons.Lock,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Spacer(modifier = Modifier.size(8.dp))
-                        Text(text = stringResource(R.string.vault))
-                    }
-                    FilledTonalButton(
-                        modifier = Modifier.weight(weight = 1f).tvFocusRing(),
-                        onClick = { filePicker.launch(input = "video/*") },
-                    ) {
-                        Icon(
-                            imageVector = NextIcons.FileOpen,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Spacer(modifier = Modifier.size(8.dp))
-                        Text(text = stringResource(R.string.pick_file))
-                    }
+                        icon = NextIcons.Lock,
+                        title = stringResource(R.string.vault),
+                        subtitle = stringResource(R.string.cinema_vault_caption),
+                    )
+                    CinemaToolTile(
+                        modifier = Modifier.weight(1f).tvFocusRing(),
+                        onClick = { filePicker.launch("video/*") },
+                        icon = NextIcons.FileOpen,
+                        title = stringResource(R.string.pick_file),
+                        subtitle = stringResource(R.string.cinema_file_caption),
+                    )
                     if (MediaOperationsService.supportsTrash()) {
-                        FilledTonalButton(
-                            modifier = Modifier.weight(weight = 1f).tvFocusRing(),
+                        CinemaToolTile(
+                            modifier = Modifier.weight(1f).tvFocusRing(),
                             onClick = { onAction(MoreAction.OpenTrash) },
-                        ) {
-                            Icon(
-                                imageVector = NextIcons.Delete,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                            )
-                            Spacer(modifier = Modifier.size(8.dp))
-                            Text(text = stringResource(R.string.trash))
-                        }
-                        Spacer(modifier = Modifier.weight(weight = 1f))
+                            icon = NextIcons.Delete,
+                            title = stringResource(R.string.trash),
+                            subtitle = stringResource(R.string.cinema_trash_caption),
+                        )
                     }
+                    CinemaToolTile(
+                        modifier = Modifier.weight(1f).tvFocusRing(),
+                        onClick = { onAction(MoreAction.OpenHistory) },
+                        icon = NextIcons.History,
+                        title = stringResource(R.string.watch_history),
+                        subtitle = stringResource(R.string.cinema_history_caption),
+                    )
                 }
                 HistorySection(
                     history = state.history,
@@ -177,13 +164,36 @@ internal fun MoreScreenContent(state: MoreUiState, onAction: (MoreAction) -> Uni
 }
 
 @Composable
+private fun CinemaToolTile(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
 private fun HistorySection(
     history: DataState<List<Video>>,
     preferences: ApplicationPreferences,
     onMoreClick: () -> Unit,
     onVideoClick: (Video) -> Unit,
 ) {
-    val videos = history.result.orEmpty().take(n = 10)
+    val videos = history.result.orEmpty().take(10)
     val isTv = LocalContext.current.isTelevision
     val historyButtonFocusRequester = remember { FocusRequester() }
     val historyFocusState = rememberRestorableFocusState()
@@ -192,29 +202,22 @@ private fun HistorySection(
     ) {
         Row(
             // Keep the full header in the vertical focus path, including its empty title area.
-            modifier = Modifier.fillMaxWidth().thenIf(condition = isTv) { focusGroup() },
+            modifier = Modifier.fillMaxWidth().thenIf(isTv) { focusGroup() },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = stringResource(R.string.history),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(start = 8.dp).weight(weight = 1f),
+                modifier = Modifier.padding(start = 8.dp).weight(1f),
             )
             IconButton(
                 onClick = onMoreClick,
                 modifier = Modifier
-                    .focusRequester(focusRequester = historyButtonFocusRequester)
-                    .focusProperties {
-                        if (isTv && !preferences.isHistoryPaused && videos.isNotEmpty()) {
-                            down = historyFocusState.requester
-                        }
-                    }
+                    .focusRequester(historyButtonFocusRequester)
+                    .focusProperties { if (isTv && !preferences.isHistoryPaused && videos.isNotEmpty()) down = historyFocusState.requester }
                     .tvFocusRing(),
             ) {
-                Icon(
-                    imageVector = NextIcons.ArrowForward,
-                    contentDescription = stringResource(R.string.history),
-                )
+                Icon(imageVector = NextIcons.ArrowForward, contentDescription = stringResource(R.string.history))
             }
         }
         when {
@@ -222,12 +225,22 @@ private fun HistorySection(
                 isHistoryOff = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-
+            history == DataState.Loading -> Text(
+                text = stringResource(R.string.cinema_history_loading),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 20.dp),
+            )
+            history is DataState.Error -> Text(
+                text = stringResource(R.string.cinema_history_unavailable),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 20.dp),
+            )
             history is DataState.Success && videos.isEmpty() -> HistoryEmptyState(
                 isHistoryOff = false,
                 modifier = Modifier.fillMaxWidth(),
             )
-
             else -> {
                 LazyRow(
                     // The screen owns initial focus; this region restores a video only when entered.
@@ -239,16 +252,10 @@ private fun HistorySection(
                                 }
                             }
                         }
-                        .restorableFocusGroup(
-                            state = historyFocusState,
-                            ready = false,
-                        ),
+                        .restorableFocusGroup(historyFocusState, ready = false),
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    items(
-                        items = videos,
-                        key = { it.uriString },
-                    ) { video ->
+                    items(videos, key = { it.uriString }) { video ->
                         VideoGridItem(
                             video = video,
                             isRecentlyPlayedVideo = false,
@@ -256,10 +263,7 @@ private fun HistorySection(
                             preferences = preferences,
                             modifier = Modifier
                                 .width(140.dp)
-                                .restorableFocusItem(
-                                    state = historyFocusState,
-                                    video.uriString,
-                                ),
+                                .restorableFocusItem(historyFocusState, video.uriString),
                             onClick = { onVideoClick(video) },
                         )
                     }
@@ -272,10 +276,5 @@ private fun HistorySection(
 @Preview
 @Composable
 private fun MoreScreenContentPreview() {
-    MoreScreenContent(
-        state = MoreUiState(
-            history = DataState.Success(value = emptyList()),
-        ),
-        onAction = {},
-    )
+    MoreScreenContent(state = MoreUiState(history = DataState.Success(emptyList())), onAction = {})
 }

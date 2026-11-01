@@ -25,8 +25,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,8 +54,8 @@ import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.core.ui.components.NextSegmentedListItem
 import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
 import dev.anilbeesetti.nextplayer.core.ui.theme.NextPlayerTheme
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun VideoItem(
@@ -81,7 +81,6 @@ fun VideoItem(
             onClick = onClick,
             onLongClick = onLongClick,
         )
-
         MediaLayoutMode.GRID -> VideoGridItem(
             video = video,
             isRecentlyPlayedVideo = isRecentlyPlayedVideo,
@@ -96,10 +95,7 @@ fun VideoItem(
     }
 }
 
-@OptIn(
-    ExperimentalLayoutApi::class,
-    ExperimentalMaterial3ExpressiveApi::class,
-)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun VideoListItem(
     video: Video,
@@ -112,10 +108,9 @@ fun VideoListItem(
     onClick: () -> Unit = {},
     onLongClick: (() -> Unit)? = null,
 ) {
-    val path = video.path.substringBeforeLast(delimiter = "/")
+    val path = video.path.substringBeforeLast("/")
     val showPath = preferences.showPathField && path.isNotBlank()
-    val showSize =
-        preferences.showSizeField && video.size > 0 && video.formattedFileSize.isNotBlank()
+    val showSize = preferences.showSizeField && video.size > 0 && video.formattedFileSize.isNotBlank()
     val showResolution = preferences.showResolutionField && video.height > 0
 
     NextSegmentedListItem(
@@ -144,22 +139,12 @@ fun VideoListItem(
                 video = video,
                 preferences = preferences,
                 modifier = Modifier
-                    .width(
-                        width = min(
-                            150.dp,
-                            b =
-                                LocalConfiguration.current.screenWidthDp.dp * 0.35f,
-                        ),
-                    ),
+                    .width(min(128.dp, LocalConfiguration.current.screenWidthDp.dp * 0.32f)),
             )
         },
         content = {
             Text(
-                text = if (preferences.showExtensionField) {
-                    video.nameWithExtension
-                } else {
-                    video.displayName
-                },
+                text = if (preferences.showExtensionField) video.nameWithExtension else video.displayName,
                 maxLines = 2,
                 style = MaterialTheme.typography.titleMedium.copy(lineBreak = LineBreak.Heading),
                 overflow = TextOverflow.Ellipsis,
@@ -245,11 +230,7 @@ fun VideoGridItem(
                     preferences = preferences,
                 )
                 Text(
-                    text = if (preferences.showExtensionField) {
-                        video.nameWithExtension
-                    } else {
-                        video.displayName
-                    },
+                    text = if (preferences.showExtensionField) video.nameWithExtension else video.displayName,
                     maxLines = 2,
                     style = textStyle.copy(lineBreak = LineBreak.Heading),
                     overflow = TextOverflow.Ellipsis,
@@ -268,14 +249,7 @@ fun VideoGridItem(
 /** True if the video is local. Remote videos avoid full download and use a placeholder. */
 private fun Video.isLocalUri(): Boolean {
     val scheme = uriString.toUri().scheme
-    return scheme.equals(
-        other = "content",
-        ignoreCase = true,
-    ) ||
-        scheme.equals(
-            other = "file",
-            ignoreCase = true,
-        )
+    return scheme.equals("content", ignoreCase = true) || scheme.equals("file", ignoreCase = true)
 }
 
 @Composable
@@ -301,7 +275,7 @@ private fun ThumbnailView(
         modifier = modifier
             .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
-            .aspectRatio(ratio = 16f / 10f),
+            .aspectRatio(16f / 10f),
     ) {
         Icon(
             imageVector = NextIcons.Video,
@@ -309,13 +283,13 @@ private fun ThumbnailView(
             tint = MaterialTheme.colorScheme.surfaceColorAtElevation(100.dp),
             modifier = Modifier
                 .align(Alignment.Center)
-                .fillMaxSize(fraction = 0.5f),
+                .fillMaxSize(0.5f),
         )
         if (preferences.showThumbnailField && isLocalVideo) {
             AsyncImage(
-                model = ImageRequest.Builder(context = context)
+                model = ImageRequest.Builder(context)
                     .data(video.uriString)
-                    .crossfade(enable = true)
+                    .crossfade(true)
                     .build(),
                 contentDescription = null,
                 alignment = Alignment.Center,
@@ -323,9 +297,7 @@ private fun ThumbnailView(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        if (preferences.showDurationField && video.duration > 0 &&
-            video.formattedDuration.isNotBlank()
-        ) {
+        if (preferences.showDurationField && video.duration > 0 && video.formattedDuration.isNotBlank()) {
             InfoChip(
                 text = video.formattedDuration,
                 modifier = Modifier
@@ -363,9 +335,9 @@ private fun ThumbnailView(
                 )
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(fraction = video.playedPercentage!!)
+                        .fillMaxWidth(video.playedPercentage!!)
                         .fillMaxHeight()
-                        .clip(shape = CircleShape)
+                        .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primary),
                 )
             }

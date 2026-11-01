@@ -1,3 +1,5 @@
+@file:androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+
 package dev.anilbeesetti.nextplayer.feature.player.state
 
 import android.app.AppOpsManager
@@ -51,10 +53,8 @@ fun rememberPictureInPictureState(
             autoEnter = autoEnter,
         )
     }
-    DisposableEffect(key1 = activity) {
-        pictureInPictureState.handleListeners(disposableEffectScope = this)
-    }
-    LaunchedEffect(key1 = player) { pictureInPictureState.observe() }
+    DisposableEffect(activity) { pictureInPictureState.handleListeners(this) }
+    LaunchedEffect(player) { pictureInPictureState.observe() }
     return pictureInPictureState
 }
 
@@ -84,27 +84,17 @@ class PictureInPictureState(
 
     val hasPipPermission: Boolean
         get() = if (isPipSupported) {
-            val appOps = getSystemService(
-                activity,
-                AppOpsManager::class.java,
-            ) ?: return true
-            appOps.checkOpNoThrow(
-                AppOpsManager.OPSTR_PICTURE_IN_PICTURE,
-                Process.myUid(),
-                activity.packageName,
-            ) == AppOpsManager.MODE_ALLOWED
+            val appOps = getSystemService(activity, AppOpsManager::class.java) ?: return true
+            appOps.checkOpNoThrow(AppOpsManager.OPSTR_PICTURE_IN_PICTURE, Process.myUid(), activity.packageName) == AppOpsManager.MODE_ALLOWED
         } else {
             true
         }
 
-    var isInPictureInPictureMode: Boolean by mutableStateOf(value = false)
+    var isInPictureInPictureMode: Boolean by mutableStateOf(false)
         private set
 
     private val pictureInPicture: VideoPlaybackPictureInPicture? = if (isPipSupported) {
-        VideoPlaybackPictureInPicture(
-            provider = activity,
-            ContextCompat.getMainExecutor(activity),
-        )
+        VideoPlaybackPictureInPicture(activity, ContextCompat.getMainExecutor(activity))
     } else {
         null
     }
@@ -115,15 +105,10 @@ class PictureInPictureState(
 
     fun setVideoViewRect(rect: Rect) {
         if (pictureInPicture == null) return
-        // Layout resizes can interrupt Android 11's PiP entry animation.
-        if (activity.isInPictureInPictureMode && !isInPictureInPictureMode) return
         if (rect.width() <= 0 || rect.height() <= 0) return
 
         val newSourceRectHint = Rect(rect)
-        val newAspectRatio = Rational(
-            newSourceRectHint.width(),
-            newSourceRectHint.height(),
-        )
+        val newAspectRatio = Rational(newSourceRectHint.width(), newSourceRectHint.height())
             .takeIf { it.toFloat() in 0.5f..2.39f }
 
         var changed = false
@@ -142,7 +127,7 @@ class PictureInPictureState(
     fun enterPictureInPictureMode(): Boolean {
         if (pictureInPicture == null || isInPictureInPictureMode) return false
         return runCatching {
-            activity.enterPictureInPictureMode(params = buildPictureInPictureParams())
+            activity.enterPictureInPictureMode(buildPictureInPictureParams())
         }.isSuccess
     }
 
@@ -153,56 +138,40 @@ class PictureInPictureState(
         activity.startActivity(intent)
     }
 
-    fun handleListeners(disposableEffectScope: DisposableEffectScope): DisposableEffectResult =
-        with(receiver = disposableEffectScope) {
-            val pipBroadcastReceiver = object : BroadcastReceiver() {
-                override fun onReceive(context: Context?, intent: Intent?) {
-                    if (intent == null || intent.action != PIP_INTENT_ACTION) return
-                    when (
-                        intent.getIntExtra(
-                            PIP_INTENT_ACTION_CODE,
-                            0,
-                        )
-                    ) {
-                        PIP_ACTION_PLAY -> player.play()
-                        PIP_ACTION_PAUSE -> player.pause()
-                        PIP_ACTION_NEXT -> player.seekToNext()
-                        PIP_ACTION_PREVIOUS -> player.seekToPrevious()
-                    }
+    fun handleListeners(disposableEffectScope: DisposableEffectScope): DisposableEffectResult = with(disposableEffectScope) {
+        val pipBroadcastReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent == null || intent.action != PIP_INTENT_ACTION) return
+                when (intent.getIntExtra(PIP_INTENT_ACTION_CODE, 0)) {
+                    PIP_ACTION_PLAY -> player.play()
+                    PIP_ACTION_PAUSE -> player.pause()
+                    PIP_ACTION_NEXT -> player.seekToNext()
+                    PIP_ACTION_PREVIOUS -> player.seekToPrevious()
                 }
-            }
-
-            val eventListener = object : PictureInPictureDelegate.OnPictureInPictureEventListener {
-                override fun onPictureInPictureEvent(
-                    event: PictureInPictureDelegate.Event,
-                    config: Configuration?,
-                ) {
-                    when (event) {
-                        // Animation callbacks require API 35; ENTERED also covers older devices.
-                        PictureInPictureDelegate.Event.ENTER_ANIMATION_START,
-                        PictureInPictureDelegate.Event.ENTERED,
-                        -> onEnterPictureInPictureMode(receiver = pipBroadcastReceiver)
-
-                        PictureInPictureDelegate.Event.EXITED -> onExitPictureInPictureMode(
-                            receiver = pipBroadcastReceiver,
-                        )
-
-                        else -> Unit
-                    }
-                }
-            }
-
-            pictureInPicture?.addOnPictureInPictureEventListener(
-                ContextCompat.getMainExecutor(activity),
-                listener = eventListener,
-            )
-
-            return onDispose {
-                pictureInPicture?.removeOnPictureInPictureEventListener(listener = eventListener)
-                pictureInPicture?.close()
-                runCatching { activity.unregisterReceiver(pipBroadcastReceiver) }
             }
         }
+
+        val eventListener = object : PictureInPictureDelegate.OnPictureInPictureEventListener {
+            override fun onPictureInPictureEvent(event: PictureInPictureDelegate.Event, config: Configuration?) {
+                when (event) {
+                    // Animation callbacks require API 35; ENTERED also covers older devices.
+                    PictureInPictureDelegate.Event.ENTER_ANIMATION_START,
+                    PictureInPictureDelegate.Event.ENTERED,
+                    -> onEnterPictureInPictureMode(pipBroadcastReceiver)
+                    PictureInPictureDelegate.Event.EXITED -> onExitPictureInPictureMode(pipBroadcastReceiver)
+                    else -> Unit
+                }
+            }
+        }
+
+        pictureInPicture?.addOnPictureInPictureEventListener(ContextCompat.getMainExecutor(activity), eventListener)
+
+        return onDispose {
+            pictureInPicture?.removeOnPictureInPictureEventListener(eventListener)
+            pictureInPicture?.close()
+            runCatching { activity.unregisterReceiver(pipBroadcastReceiver) }
+        }
+    }
 
     suspend fun observe() {
         updatePictureInPictureActions()
@@ -269,19 +238,17 @@ class PictureInPictureState(
 
     private fun buildPictureInPictureParams(): PictureInPictureParamsCompat =
         PictureInPictureParamsCompat.Builder().apply {
-            setActions(actions = actions)
-            setSeamlessResizeEnabled(seamlessResizeEnabled = true)
-            setEnabled(enabled = autoEnter && player.isPlaying)
-            aspectRatio?.let { setAspectRatio(aspectRatio = it) }
-            sourceRectHint?.let { setSourceRectHint(sourceRectHint = it) }
+            setActions(actions)
+            setSeamlessResizeEnabled(true)
+            setEnabled(autoEnter && player.isPlaying)
+            aspectRatio?.let { setAspectRatio(it) }
+            sourceRectHint?.let { setSourceRectHint(it) }
         }.build()
 
     private fun applyPictureInPictureParams() {
         val pictureInPicture = pictureInPicture ?: return
         try {
-            pictureInPicture.setPictureInPictureParams(
-                pictureInPictureParamsCompat = buildPictureInPictureParams(),
-            )
+            pictureInPicture.setPictureInPictureParams(buildPictureInPictureParams())
         } catch (e: IllegalStateException) {
             e.printStackTrace()
         }
@@ -293,24 +260,20 @@ class PictureInPictureState(
         title: String,
         @DrawableRes icon: Int,
         actionCode: Int,
-    ): RemoteAction = RemoteAction(
-        Icon.createWithResource(
-            context,
-            icon,
-        ),
-        title,
-        title,
-        PendingIntent.getBroadcast(
-            context,
-            actionCode,
-            Intent(PIP_INTENT_ACTION).apply {
-                putExtra(
-                    PIP_INTENT_ACTION_CODE,
-                    actionCode,
-                )
-                setPackage(context.packageName)
-            },
-            PendingIntent.FLAG_IMMUTABLE,
-        ),
-    )
+    ): RemoteAction {
+        return RemoteAction(
+            Icon.createWithResource(context, icon),
+            title,
+            title,
+            PendingIntent.getBroadcast(
+                context,
+                actionCode,
+                Intent(PIP_INTENT_ACTION).apply {
+                    putExtra(PIP_INTENT_ACTION_CODE, actionCode)
+                    setPackage(context.packageName)
+                },
+                PendingIntent.FLAG_IMMUTABLE,
+            ),
+        )
+    }
 }

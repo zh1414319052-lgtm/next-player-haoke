@@ -1,6 +1,7 @@
 package dev.anilbeesetti.nextplayer.feature.player
 
 import androidx.lifecycle.viewModelScope
+import dev.anilbeesetti.nextplayer.core.cast.CastSessionManager
 import dev.anilbeesetti.nextplayer.core.data.repository.fake.FakeMediaRepository
 import dev.anilbeesetti.nextplayer.core.data.repository.fake.FakePreferencesRepository
 import dev.anilbeesetti.nextplayer.core.domain.GetSortedPlaylistUseCase
@@ -34,30 +35,22 @@ class PlayerViewModelTest {
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(dispatcher = dispatcher)
+        Dispatchers.setMain(dispatcher)
         val mediaRepository = FakeMediaRepository()
         viewModel = PlayerViewModel(
             mediaRepository = mediaRepository,
+            castSessionManager = CastSessionManager(
+                context = RuntimeEnvironment.getApplication(),
+                scope = kotlinx.coroutines.test.TestScope(dispatcher),
+            ),
             preferencesRepository = preferences,
             getSortedPlaylistUseCase = GetSortedPlaylistUseCase(
-                getSortedVideosUseCase = GetSortedVideosUseCase(
-                    mediaRepository = mediaRepository,
-                    preferencesRepository = preferences,
-                    defaultDispatcher = dispatcher,
-                ),
+                getSortedVideosUseCase = GetSortedVideosUseCase(mediaRepository, preferences, dispatcher),
                 preferencesRepository = preferences,
                 context = RuntimeEnvironment.getApplication(),
                 defaultDispatcher = dispatcher,
             ),
-            output = PlayerViewModel.Output(
-                navigateUp = {},
-                selectSubtitle = {},
-                selectAudio = {},
-                playInBackground = {},
-                setVideoDecoderMode = {},
-                setAudioDecoderMode = {},
-                tryDecoderFallback = {},
-            ),
+            output = PlayerViewModel.Output({}, {}, {}, {}, {}, {}, {}),
         )
     }
 
@@ -68,53 +61,39 @@ class PlayerViewModelTest {
     }
 
     @Test
-    fun `preference and decoder updates preserve paused playback without a state subscriber`() =
-        runTest(context = dispatcher) {
-            viewModel.onAction(PlayerAction.UpdatePlayWhenReady(playWhenReady = false))
-            assertFalse(viewModel.state.value.playWhenReady)
-            val decoderState = DecoderServiceState(videoMode = DecoderMode.SOFTWARE)
-            viewModel.onAction(PlayerAction.UpdateDecoderServiceState(state = decoderState))
+    fun `preference and decoder updates preserve paused playback without a state subscriber`() = runTest(dispatcher) {
+        viewModel.onAction(PlayerAction.UpdatePlayWhenReady(false))
+        assertFalse(viewModel.state.value.playWhenReady)
+        val decoderState = DecoderServiceState(videoMode = DecoderMode.SOFTWARE)
+        viewModel.onAction(PlayerAction.UpdateDecoderServiceState(decoderState))
 
-            preferences.updatePlayerPreferences { it.copy(playerBrightness = 0.4f) }
-            runCurrent()
+        preferences.updatePlayerPreferences { it.copy(playerBrightness = 0.4f) }
+        runCurrent()
 
-            assertFalse(viewModel.state.value.playWhenReady)
-            assertEquals(
-                0.4f,
-                viewModel.state.value.playerPreferences.playerBrightness,
-            )
-            assertEquals(
-                decoderState,
-                viewModel.state.value.decoderServiceState,
-            )
+        assertFalse(viewModel.state.value.playWhenReady)
+        assertEquals(0.4f, viewModel.state.value.playerPreferences.playerBrightness)
+        assertEquals(decoderState, viewModel.state.value.decoderServiceState)
 
-            viewModel.onAction(PlayerAction.UpdatePlayWhenReady(playWhenReady = true))
-            assertTrue(viewModel.state.value.playWhenReady)
-            assertEquals(
-                0.4f,
-                viewModel.state.value.playerPreferences.playerBrightness,
-            )
-        }
+        viewModel.onAction(PlayerAction.UpdatePlayWhenReady(true))
+        assertTrue(viewModel.state.value.playWhenReady)
+        assertEquals(0.4f, viewModel.state.value.playerPreferences.playerBrightness)
+    }
 
     @Test
-    fun `queued toggles use latest preferences and preserve playback state`() =
-        runTest(context = dispatcher) {
-            preferences.updatePlayerPreferences { it.copy(showRemainingTime = false) }
-            viewModel.onAction(PlayerAction.UpdatePlayWhenReady(playWhenReady = false))
-            viewModel.onAction(action = PlayerAction.ToggleTimeDisplay)
-            viewModel.onAction(PlayerAction.UpdatePlayerBrightness(value = 0.7f))
-            viewModel.onAction(action = PlayerAction.ToggleTimeDisplay)
-            runCurrent()
+    fun `queued toggles use latest preferences and preserve playback state`() = runTest(dispatcher) {
+        preferences.updatePlayerPreferences { it.copy(showRemainingTime = false) }
+        viewModel.onAction(PlayerAction.UpdatePlayWhenReady(false))
+        viewModel.onAction(PlayerAction.ToggleTimeDisplay)
+        viewModel.onAction(PlayerAction.UpdatePlayerBrightness(0.7f))
+        viewModel.onAction(PlayerAction.ToggleTimeDisplay)
+        runCurrent()
 
-            assertFalse(viewModel.state.value.playerPreferences.showRemainingTime)
-            assertEquals(
-                0.7f,
-                viewModel.state.value.playerPreferences.playerBrightness,
-            )
-            assertFalse(viewModel.state.value.playWhenReady)
+        assertFalse(viewModel.state.value.playerPreferences.showRemainingTime)
+        assertEquals(0.7f, viewModel.state.value.playerPreferences.playerBrightness)
+        assertFalse(viewModel.state.value.playWhenReady)
 
-            viewModel.onAction(action = PlayerAction.ToggleTimeDisplay)
-            runCurrent()
-            assertTrue(viewModel.state.value.playerPreferences.showRemainingTime)
-        }
+        viewModel.onAction(PlayerAction.ToggleTimeDisplay)
+        runCurrent()
+        assertTrue(viewModel.state.value.playerPreferences.showRemainingTime)
+    }
 }

@@ -19,11 +19,11 @@ internal suspend fun initializeSshKeyStore(
             }
             .mapNotNull { connection ->
                 connection.privateKeyFileName.trim()
-                    .takeIf(predicate = SshKeyStore::isValidFileName)
+                    .takeIf(SshKeyStore::isValidFileName)
             }
             .toSet()
     } catch (_: Throwable) {
         null
     }
-    sshKeyStore.initialize(referencedFileNames = referencedFileNames)
+    sshKeyStore.initialize(referencedFileNames)
 }

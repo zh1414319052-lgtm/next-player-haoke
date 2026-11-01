@@ -6,6 +6,7 @@ import androidx.datastore.core.DataStoreFactory
 import androidx.datastore.dataStoreFile
 import dev.anilbeesetti.nextplayer.core.common.di.DiQualifiers
 import dev.anilbeesetti.nextplayer.core.common.di.DispatchersModule
+import dev.anilbeesetti.nextplayer.core.datastore.migration.FrameInterpolationTargetMigration
 import dev.anilbeesetti.nextplayer.core.datastore.serializer.ApplicationPreferencesSerializer
 import dev.anilbeesetti.nextplayer.core.datastore.serializer.PlayerPreferencesSerializer
 import dev.anilbeesetti.nextplayer.core.datastore.serializer.SearchHistorySerializer
@@ -35,8 +36,8 @@ class DataStoreModule {
         @Named(DiQualifiers.APPLICATION_SCOPE) scope: CoroutineScope,
     ): DataStore<ApplicationPreferences> = DataStoreFactory.create(
         serializer = ApplicationPreferencesSerializer,
-        scope = CoroutineScope(context = scope.coroutineContext + ioDispatcher),
-        produceFile = { context.dataStoreFile(fileName = APP_PREFERENCES_DATASTORE_FILE) },
+        scope = CoroutineScope(scope.coroutineContext + ioDispatcher),
+        produceFile = { context.dataStoreFile(APP_PREFERENCES_DATASTORE_FILE) },
     )
 
     @Single
@@ -47,10 +48,9 @@ class DataStoreModule {
         @Named(DiQualifiers.APPLICATION_SCOPE) scope: CoroutineScope,
     ): DataStore<PlayerPreferences> = DataStoreFactory.create(
         serializer = PlayerPreferencesSerializer,
-        scope = CoroutineScope(context = scope.coroutineContext + ioDispatcher),
-        produceFile = {
-            applicationContext.dataStoreFile(fileName = PLAYER_PREFERENCES_DATASTORE_FILE)
-        },
+        migrations = listOf(FrameInterpolationTargetMigration),
+        scope = CoroutineScope(scope.coroutineContext + ioDispatcher),
+        produceFile = { applicationContext.dataStoreFile(PLAYER_PREFERENCES_DATASTORE_FILE) },
     )
 
     @Single
@@ -61,9 +61,7 @@ class DataStoreModule {
         @Named(DiQualifiers.APPLICATION_SCOPE) scope: CoroutineScope,
     ): DataStore<SearchHistory> = DataStoreFactory.create(
         serializer = SearchHistorySerializer,
-        scope = CoroutineScope(context = scope.coroutineContext + ioDispatcher),
-        produceFile = {
-            applicationContext.dataStoreFile(fileName = SEARCH_HISTORY_DATASTORE_FILE)
-        },
+        scope = CoroutineScope(scope.coroutineContext + ioDispatcher),
+        produceFile = { applicationContext.dataStoreFile(SEARCH_HISTORY_DATASTORE_FILE) },
     )
 }

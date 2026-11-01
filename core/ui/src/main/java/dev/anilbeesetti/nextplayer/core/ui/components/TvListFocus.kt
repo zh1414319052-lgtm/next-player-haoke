@@ -27,16 +27,13 @@ fun Modifier.tvListFocus(
     val context = LocalContext.current
     val isTv = remember { context.isTelevision }
 
-    LaunchedEffect(
-        key1 = isTv,
-        key2 = focusRequester,
-    ) {
+    LaunchedEffect(isTv, focusRequester) {
         if (!isTv) return@LaunchedEffect
         focusRequester.requestFocusUntilLanded()
     }
 
     return if (isTv) {
-        this.focusRequester(focusRequester = focusRequester)
+        this.focusRequester(focusRequester)
             .focusRestorer()
             .focusGroup()
     } else {
@@ -48,5 +45,5 @@ fun Modifier.tvListFocus(
 fun Modifier.tvFocusDown(target: FocusRequester): Modifier {
     val context = LocalContext.current
     val isTv = remember { context.isTelevision }
-    return if (isTv) this.tvFocusRing(isTv = isTv).focusProperties { down = target } else this
+    return if (isTv) this.tvFocusRing(isTv).focusProperties { down = target } else this
 }

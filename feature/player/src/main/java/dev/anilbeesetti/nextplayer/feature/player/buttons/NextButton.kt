@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -12,17 +13,22 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.rememberNextButtonState
 import dev.anilbeesetti.nextplayer.core.ui.R as coreUiR
+import dev.anilbeesetti.nextplayer.feature.player.LocalUseMaterialYouControls
 import dev.anilbeesetti.nextplayer.feature.player.LocalControlsVisibilityState
 
 @OptIn(UnstableApi::class)
 @Composable
-internal fun NextButton(modifier: Modifier = Modifier, player: Player?) {
-    val state = rememberNextButtonState(player = player)
+internal fun NextButton(
+    modifier: Modifier = Modifier,
+    player: Player?,
+) {
+    val state = rememberNextButtonState(player)
     val controlsVisibilityState = LocalControlsVisibilityState.current
 
     PlayerButton(
         modifier = modifier.size(48.dp),
         enabled = state.isEnabled,
+        containerColor = if (LocalUseMaterialYouControls.current) Color.Transparent else Color.Black.copy(alpha = 0.3f),
         onClick = {
             state.onClick()
             controlsVisibilityState?.showControls()

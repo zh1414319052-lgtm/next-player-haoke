@@ -74,13 +74,19 @@ class CrashActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModel()
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(dev.anilbeesetti.nextplayer.core.common.PrimaryLanguage.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val exceptionString = intent.getStringExtra("exception") ?: ""
-        var logcat by mutableStateOf(value = "")
+        var logcat by mutableStateOf("")
 
-        lifecycleScope.launch { logcat = collectLogcat() }
+        lifecycleScope.launch {
+            logcat = collectLogcat()
+        }
 
         installSplashScreen().setKeepOnScreenCondition {
             viewModel.state.value is MainActivityUiState.Loading
@@ -90,7 +96,7 @@ class CrashActivity : ComponentActivity() {
             val state by viewModel.state.collectAsStateWithLifecycle()
             val shouldUseDarkTheme = shouldUseDarkTheme(state = state)
 
-            LaunchedEffect(key1 = shouldUseDarkTheme) {
+            LaunchedEffect(shouldUseDarkTheme) {
                 enableEdgeToEdge(
                     statusBarStyle = SystemBarStyle.auto(
                         lightScrim = Color.TRANSPARENT,
@@ -112,10 +118,7 @@ class CrashActivity : ComponentActivity() {
             ) {
                 val clipboard = LocalClipboard.current
                 CrashScreen(
-                    input = CrashState(
-                        exceptionString = exceptionString,
-                        logcat = logcat,
-                    ),
+                    input = CrashState(exceptionString, logcat),
                     output = CrashOutput(
                         shareLogs = {
                             lifecycleScope.launch {
@@ -129,21 +132,12 @@ class CrashActivity : ComponentActivity() {
                         copyLogs = {
                             copyCrashReportToClipboard(
                                 clipboard = clipboard.nativeClipboard,
-                                report = concatLogs(
-                                    deviceInfo = collectDeviceInfo(),
-                                    crashLogs = exceptionString,
-                                    logcat = logcat,
-                                ),
+                                report = concatLogs(collectDeviceInfo(), exceptionString, logcat),
                             )
                         },
                         restart = {
                             finish()
-                            startActivity(
-                                Intent(
-                                    this@CrashActivity,
-                                    MainActivity::class.java,
-                                ),
-                            )
+                            startActivity(Intent(this@CrashActivity, MainActivity::class.java))
                         },
                     ),
                 )
@@ -151,60 +145,56 @@ class CrashActivity : ComponentActivity() {
         }
     }
 
-    private suspend fun shareLogs(deviceInfo: String, exceptionString: String, logcat: String) =
-        withContext(Dispatchers.IO) {
-            val file = File(
-                cacheDir,
-                "next_player_logs.txt",
-            ).also {
-                if (it.exists()) it.delete()
-                it.createNewFile()
-            }
-            val logs = concatLogs(
-                deviceInfo = deviceInfo,
-                crashLogs = exceptionString,
-                logcat = logcat,
-            )
-            file.writeText(text = logs)
-            val uri = FileProvider.getUriForFile(
-                this@CrashActivity,
-                "$packageName.fileprovider",
-                file,
-            )
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-                clipData = ClipData.newRawUri(
-                    null,
-                    uri,
-                )
-                putExtra(
-                    Intent.EXTRA_STREAM,
-                    uri,
-                )
-            }
-            startActivity(
-                Intent.createChooser(
-                    intent,
-                    getString(R.string.crash_screen_share),
-                ),
-            )
+    private suspend fun shareLogs(
+        deviceInfo: String,
+        exceptionString: String,
+        logcat: String,
+    ) = withContext(Dispatchers.IO) {
+        val file = File(cacheDir, "next_player_logs.txt").also {
+            if (it.exists()) it.delete()
+            it.createNewFile()
         }
+        val logs = concatLogs(
+            deviceInfo = deviceInfo,
+            crashLogs = exceptionString,
+            logcat = logcat,
+        )
+        file.writeText(text = logs)
+        val uri = FileProvider.getUriForFile(
+            this@CrashActivity,
+            "$packageName.fileprovider",
+            file,
+        )
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            clipData = ClipData.newRawUri(null, uri)
+            putExtra(Intent.EXTRA_STREAM, uri)
+        }
+        startActivity(
+            Intent.createChooser(intent, getString(R.string.crash_screen_share)),
+        )
+    }
 
-    private fun concatLogs(deviceInfo: String, crashLogs: String? = null, logcat: String): String =
-        StringBuilder().apply {
-            appendLine(value = deviceInfo)
+    private fun concatLogs(
+        deviceInfo: String,
+        crashLogs: String? = null,
+        logcat: String,
+    ): String {
+        return StringBuilder().apply {
+            appendLine(deviceInfo)
             appendLine()
             if (!crashLogs.isNullOrBlank()) {
-                appendLine("-".repeat(n = 50))
-                appendLine(value = "Exception:")
-                appendLine(value = crashLogs)
+                appendLine("-".repeat(50))
+                appendLine("Exception:")
+                appendLine(crashLogs)
                 appendLine()
             }
-            appendLine("-".repeat(n = 50))
-            appendLine(value = "Logcat:")
-            appendLine(value = logcat)
+            appendLine("-".repeat(50))
+            appendLine("Logcat:")
+            appendLine(logcat)
         }.toString()
+    }
 
     private suspend fun collectLogcat(): String = withContext(Dispatchers.IO) {
         val process = Runtime.getRuntime()
@@ -213,7 +203,7 @@ class CrashActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             reader.lines().forEach(logcat::appendLine)
         } else {
-            reader.readLines().forEach(action = logcat::appendLine)
+            reader.readLines().forEach(logcat::appendLine)
         }
         logcat.toString()
     }
@@ -228,11 +218,7 @@ class CrashActivity : ComponentActivity() {
 }
 
 private data class CrashState(val exceptionString: String, val logcat: String)
-private data class CrashOutput(
-    val shareLogs: () -> Unit,
-    val copyLogs: () -> Unit,
-    val restart: () -> Unit,
-)
+private data class CrashOutput(val shareLogs: () -> Unit, val copyLogs: () -> Unit, val restart: () -> Unit)
 private sealed interface CrashAction {
     data object ShareLogs : CrashAction
     data object CopyLogs : CrashAction
@@ -251,7 +237,10 @@ private fun CrashScreen(input: CrashState, output: CrashOutput) {
 }
 
 @Composable
-private fun CrashScreenContent(state: CrashState, onAction: (CrashAction) -> Unit) {
+private fun CrashScreenContent(
+    state: CrashState,
+    onAction: (CrashAction) -> Unit,
+) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
@@ -262,10 +251,7 @@ private fun CrashScreenContent(state: CrashState, onAction: (CrashAction) -> Uni
                         drawLine(
                             color = borderColor,
                             start = Offset.Zero,
-                            end = Offset(
-                                size.width,
-                                y = 0f,
-                            ),
+                            end = Offset(size.width, 0f),
                             strokeWidth = Dp.Hairline.value,
                         )
                     }
@@ -277,26 +263,27 @@ private fun CrashScreenContent(state: CrashState, onAction: (CrashAction) -> Uni
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Button(
                         onClick = { onAction(CrashAction.ShareLogs) },
-                        modifier = Modifier.weight(weight = 1f),
-                    ) { Text(text = stringResource(R.string.crash_screen_share)) }
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(R.string.crash_screen_share))
+                    }
                     FilledIconButton(onClick = { onAction(CrashAction.CopyLogs) }) {
-                        Icon(
-                            imageVector = NextIcons.Copy,
-                            contentDescription = null,
-                        )
+                        Icon(imageVector = NextIcons.Copy, contentDescription = null)
                     }
                 }
                 OutlinedButton(
                     onClick = { onAction(CrashAction.Restart) },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text(text = stringResource(R.string.crash_screen_restart)) }
+                ) {
+                    Text(text = stringResource(R.string.crash_screen_restart))
+                }
             }
         },
     ) { paddingValues ->
         Column(
             modifier = Modifier
-                .verticalScroll(state = rememberScrollState())
-                .padding(paddingValues = paddingValues)
+                .verticalScroll(rememberScrollState())
+                .padding(paddingValues)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -311,10 +298,7 @@ private fun CrashScreenContent(state: CrashState, onAction: (CrashAction) -> Uni
                 style = MaterialTheme.typography.headlineLarge,
             )
             Text(
-                text = stringResource(
-                    R.string.crash_screen_subtitle,
-                    stringResource(R.string.app_name),
-                ),
+                text = stringResource(R.string.crash_screen_subtitle, stringResource(R.string.app_name)),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
@@ -333,14 +317,17 @@ private fun CrashScreenContent(state: CrashState, onAction: (CrashAction) -> Uni
 }
 
 @Composable
-private fun LogsSelectionContainer(logs: String, modifier: Modifier = Modifier) {
+private fun LogsSelectionContainer(
+    logs: String,
+    modifier: Modifier = Modifier,
+) {
     SelectionContainer(
         modifier = modifier
             .fillMaxWidth()
-            .clip(shape = RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(2.dp)
-            .horizontalScroll(state = rememberScrollState()),
+            .horizontalScroll(rememberScrollState()),
     ) {
         Text(
             text = logs,
@@ -356,10 +343,7 @@ private fun LogsSelectionContainer(logs: String, modifier: Modifier = Modifier) 
 private fun CrashLogsScreenPreview() {
     NextPlayerTheme {
         CrashScreenContent(
-            state = CrashState(
-                exceptionString = "Exception message",
-                logcat = "Logcat message",
-            ),
+            state = CrashState(exceptionString = "Exception message", logcat = "Logcat message"),
             onAction = {},
         )
     }

@@ -26,10 +26,12 @@ fun PermissionRationaleDialog(
                 text = stringResource(R.string.permission_request),
             )
         },
-        text = { Text(text = text) },
+        text = {
+            Text(text = text)
+        },
         confirmButton = {
             Button(onClick = onConfirmButtonClick) {
-                Text(text = stringResource(R.string.grant_permission))
+                Text(stringResource(R.string.grant_permission))
             }
         },
     )

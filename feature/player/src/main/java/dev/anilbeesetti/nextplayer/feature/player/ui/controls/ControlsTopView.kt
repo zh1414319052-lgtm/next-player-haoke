@@ -2,6 +2,9 @@ package dev.anilbeesetti.nextplayer.feature.player.ui.controls
 
 import androidx.annotation.OptIn
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -46,43 +49,14 @@ fun ControlsTopView(
     videoDecoderMode: DecoderMode?,
     onBackClick: () -> Unit = {},
     onDecoderClick: () -> Unit = {},
-    onAudioClick: () -> Unit = {},
-    onSubtitleClick: () -> Unit = {},
     onPlaylistClick: () -> Unit = {},
 ) {
     val firstControlFocusRequester = remember { FocusRequester() }
-    val systemBarsPadding = WindowInsets.systemBars.union(
-        WindowInsets.displayCutout,
-    ).asPaddingValues()
+    val systemBarsPadding = WindowInsets.systemBars.union(WindowInsets.displayCutout).asPaddingValues()
     val decoderDescription = stringResource(R.string.select_decoders)
     // Add top spacing only when the system bars don't already provide it (e.g. on TV / landscape).
     val extraTopPadding = if (systemBarsPadding.calculateTopPadding() == 0.dp) 16.dp else 0.dp
-    Row(
-        modifier = modifier
-            .padding(systemBarsPadding.copy(bottom = 0.dp))
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 16.dp)
-            .padding(top = extraTopPadding)
-            .focusProperties { onEnter = { firstControlFocusRequester.requestFocus() } }
-            .focusGroup(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        PlayerButton(onClick = onBackClick) {
-            Icon(
-                painter = painterResource(R.drawable.ic_arrow_left),
-                contentDescription = null,
-            )
-        }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium.copy(lineBreak = LineBreak.Heading),
-            color = Color.White,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(weight = 1f),
-        )
-
+    val actions: @Composable () -> Unit = {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -90,7 +64,7 @@ fun ControlsTopView(
             PlayerButton(
                 modifier = Modifier
                     .semantics { contentDescription = decoderDescription }
-                    .focusRequester(focusRequester = firstControlFocusRequester),
+                    .focusRequester(firstControlFocusRequester),
                 onClick = onDecoderClick,
             ) {
                 Text(
@@ -105,17 +79,38 @@ fun ControlsTopView(
                     contentDescription = null,
                 )
             }
-            PlayerButton(onClick = onAudioClick) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_audio_track),
-                    contentDescription = null,
+        }
+    }
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(systemBarsPadding.copy(bottom = 0.dp))
+            .padding(horizontal = 16.dp, vertical = 0.dp)
+            .padding(bottom = 16.dp, top = extraTopPadding)
+            .focusProperties { onEnter = { firstControlFocusRequester.requestFocus() } }
+            .focusGroup(),
+    ) {
+        val compact = maxWidth < 480.dp
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                PlayerButton(onClick = onBackClick) {
+                    Icon(painter = painterResource(R.drawable.ic_arrow_left), contentDescription = null)
+                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium.copy(lineBreak = LineBreak.Heading),
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
+                if (!compact) actions()
             }
-            PlayerButton(onClick = onSubtitleClick) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_subtitle_track),
-                    contentDescription = null,
-                )
+            if (compact) {
+                Row(Modifier.align(Alignment.End)) { actions() }
             }
         }
     }

@@ -45,11 +45,7 @@ import dev.anilbeesetti.nextplayer.feature.videopicker.state.SelectionManager
 import dev.anilbeesetti.nextplayer.feature.videopicker.state.rememberSelectionManager
 import kotlin.math.abs
 
-@OptIn(
-    ExperimentalMaterial3Api::class,
-    ExperimentalFoundationApi::class,
-    ExperimentalPermissionsApi::class,
-)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalPermissionsApi::class)
 @Composable
 fun MediaView(
     mediaHolder: MediaHolder,
@@ -83,15 +79,11 @@ fun MediaView(
             MediaLayoutMode.GRID -> 2.dp
         }
         val maxWidth = this.maxWidth - (contentHorizontalPadding * 2) - itemSpacing
-        val maxFolders = (maxWidth / folderMinWidth).toInt().coerceAtLeast(minimumValue = 1)
-        val maxVideos = (maxWidth / videoMinWidth).toInt().coerceAtLeast(minimumValue = 1)
+        val maxFolders = (maxWidth / folderMinWidth).toInt().coerceAtLeast(1)
+        val maxVideos = (maxWidth / videoMinWidth).toInt().coerceAtLeast(1)
         val spans = when (preferences.mediaLayoutMode) {
             MediaLayoutMode.LIST -> 1
-
-            MediaLayoutMode.GRID -> lcm(
-                a = maxFolders,
-                b = maxVideos,
-            )
+            MediaLayoutMode.GRID -> lcm(maxFolders, maxVideos)
         }
 
         val singleFolderSpan = when (preferences.mediaLayoutMode) {
@@ -106,112 +98,102 @@ fun MediaView(
         LazyVerticalGrid(
             modifier = modifier.fillMaxSize().restorableFocusGroup(
                 state = focusState,
-                ready =
-                    autoFocus &&
-                        (mediaHolder.folders.isNotEmpty() || mediaHolder.videos.isNotEmpty()),
+                ready = autoFocus && (mediaHolder.folders.isNotEmpty() || mediaHolder.videos.isNotEmpty()),
             ),
             state = lazyGridState,
-            columns = GridCells.Fixed(count = spans),
-            contentPadding =
-                contentPadding +
-                    PaddingValues(
-                        horizontal = contentHorizontalPadding,
-                        vertical = 8.dp,
-                    ),
-            verticalArrangement = Arrangement.spacedBy(space = itemSpacing),
-            horizontalArrangement = Arrangement.spacedBy(space = itemSpacing),
+            columns = GridCells.Fixed(spans),
+            contentPadding = contentPadding + PaddingValues(horizontal = contentHorizontalPadding, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(itemSpacing),
+            horizontalArrangement = Arrangement.spacedBy(itemSpacing),
         ) {
-            if (showHeaders && mediaHolder.folders.isNotEmpty()) {
-                item(span = { GridItemSpan(currentLineSpan = maxLineSpan) }) {
-                    ListSectionTitle(
-                        text =
-                            stringResource(
-                                id = R.string.folders,
-                            ) + " (${mediaHolder.folders.size})",
+            recentlyPlayedVideo?.let { recent ->
+                item(key = "continue_watching", span = { GridItemSpan(maxLineSpan) }) {
+                    ContinueWatchingCard(
+                        video = recent,
+                        modifier = Modifier.restorableFocusItem(focusState, "recent:" + recent.uriString),
+                        onClick = {
+                            if (!selectionManager.isInSelectionMode) {
+                                onVideoClick(recent.uriString.toUri())
+                            }
+                        },
                     )
+                }
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Spacer(modifier = Modifier.size(12.dp))
+                }
+            }
+
+            if (showHeaders && mediaHolder.folders.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    ListSectionTitle(text = stringResource(id = R.string.folders) + " (${mediaHolder.folders.size})")
                 }
             }
             itemsIndexed(
                 items = mediaHolder.folders,
                 key = { _, folder -> folder.path },
-                span = { _, _ -> GridItemSpan(currentLineSpan = singleFolderSpan) },
+                span = { _, _ -> GridItemSpan(singleFolderSpan) },
             ) { index, folder ->
-                val selected by remember {
-                    derivedStateOf { selectionManager.isFolderSelected(folder = folder) }
-                }
+                val selected by remember { derivedStateOf { selectionManager.isFolderSelected(folder) } }
                 FolderItem(
                     folder = folder,
                     isRecentlyPlayedFolder = folder.path == recentlyPlayedFolder?.path,
                     preferences = preferences,
-                    modifier = Modifier.restorableFocusItem(
-                        state = focusState,
-                        folder.path,
-                    ),
+                    modifier = Modifier.restorableFocusItem(focusState, folder.path),
                     selected = selected,
                     isFirstItem = index == 0,
                     isLastItem = index == mediaHolder.folders.lastIndex,
                     onClick = {
                         if (selectionManager.isInSelectionMode) {
                             haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                            selectionManager.toggleFolderSelection(folder = folder)
+                            selectionManager.toggleFolderSelection(folder)
                         } else {
                             onFolderClick(folder.path)
                         }
                     },
                     onLongClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        selectionManager.toggleFolderSelection(folder = folder)
+                        selectionManager.toggleFolderSelection(folder)
                     },
                 )
             }
 
-            if (preferences.mediaViewMode == MediaViewMode.FOLDER_TREE &&
-                mediaHolder.folders.isNotEmpty()
-            ) {
-                item(span = { GridItemSpan(currentLineSpan = maxLineSpan) }) {
+            if (preferences.mediaViewMode == MediaViewMode.FOLDER_TREE && mediaHolder.folders.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     Spacer(modifier = Modifier.size(8.dp))
                 }
             }
 
             if (showHeaders && mediaHolder.videos.isNotEmpty()) {
-                item(span = { GridItemSpan(currentLineSpan = maxLineSpan) }) {
-                    ListSectionTitle(
-                        text =
-                            stringResource(id = R.string.videos) + " (${mediaHolder.videos.size})",
-                    )
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    ListSectionTitle(text = stringResource(id = R.string.videos) + " (${mediaHolder.videos.size})")
                 }
             }
 
             itemsIndexed(
                 items = mediaHolder.videos,
                 key = { _, video -> video.uriString },
-                span = { _, _ -> GridItemSpan(currentLineSpan = singleVideoSpan) },
+                span = { _, _ -> GridItemSpan(singleVideoSpan) },
             ) { index, video ->
-                val selected by remember {
-                    derivedStateOf { selectionManager.isVideoSelected(video = video) }
-                }
+                val selected by remember { derivedStateOf { selectionManager.isVideoSelected(video) } }
                 VideoItem(
                     video = video,
                     preferences = preferences,
                     isRecentlyPlayedVideo = video.path == recentlyPlayedVideo?.path,
-                    modifier = Modifier.restorableFocusItem(
-                        state = focusState,
-                        video.uriString,
-                    ),
+                    modifier = Modifier.restorableFocusItem(focusState, video.uriString),
                     isFirstItem = index == 0,
                     isLastItem = index == mediaHolder.videos.lastIndex,
                     selected = selected,
                     onClick = {
                         if (selectionManager.isInSelectionMode) {
                             haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
-                            selectionManager.toggleVideoSelection(video = video)
+                            selectionManager.toggleVideoSelection(video)
                         } else {
                             onVideoClick(video.uriString.toUri())
                         }
                     },
                     onLongClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        selectionManager.toggleVideoSelection(video = video)
+                        selectionManager.toggleVideoSelection(video)
                     },
                 )
             }
@@ -219,16 +201,10 @@ fun MediaView(
     }
 }
 
-fun lcm(a: Int, b: Int): Int = abs(n = a * b) / gcd(
-    a = a,
-    b = b,
-)
+fun lcm(a: Int, b: Int): Int {
+    return abs(a * b) / gcd(a, b)
+}
 
-fun gcd(a: Int, b: Int): Int = if (b == 0) {
-    a
-} else {
-    gcd(
-        a = b,
-        b = a % b,
-    )
+fun gcd(a: Int, b: Int): Int {
+    return if (b == 0) a else gcd(b, a % b)
 }

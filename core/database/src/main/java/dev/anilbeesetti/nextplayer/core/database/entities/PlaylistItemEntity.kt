@@ -18,10 +18,7 @@ import androidx.room.Index
     ],
     indices = [
         Index("playlist_id"),
-        Index(
-            value = ["playlist_id", "position"],
-            unique = true,
-        ),
+        Index(value = ["playlist_id", "position"], unique = true),
     ],
 )
 data class PlaylistItemEntity(

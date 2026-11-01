@@ -34,7 +34,9 @@ import dev.anilbeesetti.nextplayer.core.ui.components.tvListFocus
 import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
 
 @Composable
-fun GeneralPreferencesScreen(viewModel: GeneralPreferencesViewModel) {
+fun GeneralPreferencesScreen(
+    viewModel: GeneralPreferencesViewModel,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     GeneralPreferencesScreenContent(
@@ -43,10 +45,7 @@ fun GeneralPreferencesScreen(viewModel: GeneralPreferencesViewModel) {
     )
 }
 
-@OptIn(
-    ExperimentalMaterial3Api::class,
-    ExperimentalMaterial3ExpressiveApi::class,
-)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun GeneralPreferencesScreenContent(
     state: GeneralPreferencesUiState,
@@ -58,12 +57,7 @@ private fun GeneralPreferencesScreenContent(
             NextTopAppBar(
                 title = stringResource(id = R.string.general_name),
                 navigationIcon = {
-                    FilledTonalIconButton(
-                        onClick = {
-                            onAction(GeneralPreferencesUiEvent.NavigateUp)
-                        },
-                        modifier = Modifier.tvFocusDown(target = listFocusRequester),
-                    ) {
+                    FilledTonalIconButton(onClick = { onAction(GeneralPreferencesUiEvent.NavigateUp) }, modifier = Modifier.tvFocusDown(listFocusRequester)) {
                         Icon(
                             imageVector = NextIcons.ArrowBack,
                             contentDescription = stringResource(id = R.string.navigate_up),
@@ -72,14 +66,14 @@ private fun GeneralPreferencesScreenContent(
                 },
             )
         },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(state = rememberScrollState())
-                .tvListFocus(focusRequester = listFocusRequester)
-                .padding(paddingValues = innerPadding)
+                .tvListFocus(listFocusRequester)
+                .padding(innerPadding)
                 .padding(horizontal = 16.dp),
         ) {
             ListSectionTitle(text = stringResource(id = R.string.user_data))
@@ -90,26 +84,14 @@ private fun GeneralPreferencesScreenContent(
                     title = stringResource(R.string.delete_thumbnail_cache),
                     description = stringResource(R.string.delete_thumbnail_cache_description),
                     icon = NextIcons.DeleteSweep,
-                    onClick = {
-                        onAction(
-                            GeneralPreferencesUiEvent.ShowDialog(
-                                value = GeneralPreferencesDialog.ClearThumbnailCacheDialog,
-                            ),
-                        )
-                    },
+                    onClick = { onAction(GeneralPreferencesUiEvent.ShowDialog(GeneralPreferencesDialog.ClearThumbnailCacheDialog)) },
                     isFirstItem = true,
                 )
                 ClickablePreferenceItem(
                     title = stringResource(R.string.reset_settings),
                     description = stringResource(R.string.reset_settings_description),
                     icon = NextIcons.History,
-                    onClick = {
-                        onAction(
-                            GeneralPreferencesUiEvent.ShowDialog(
-                                value = GeneralPreferencesDialog.ResetSettingsDialog,
-                            ),
-                        )
-                    },
+                    onClick = { onAction(GeneralPreferencesUiEvent.ShowDialog(GeneralPreferencesDialog.ResetSettingsDialog)) },
                     isLastItem = true,
                 )
             }
@@ -119,9 +101,7 @@ private fun GeneralPreferencesScreenContent(
             when (dialog) {
                 GeneralPreferencesDialog.ClearThumbnailCacheDialog -> {
                     NextDialog(
-                        onDismissRequest = {
-                            onAction(GeneralPreferencesUiEvent.ShowDialog(value = null))
-                        },
+                        onDismissRequest = { onAction(GeneralPreferencesUiEvent.ShowDialog(null)) },
                         title = {
                             Text(
                                 text = stringResource(R.string.delete_thumbnail_cache),
@@ -132,15 +112,13 @@ private fun GeneralPreferencesScreenContent(
                             TextButton(
                                 onClick = {
                                     onAction(GeneralPreferencesUiEvent.ClearThumbnailCache)
-                                    onAction(GeneralPreferencesUiEvent.ShowDialog(value = null))
+                                    onAction(GeneralPreferencesUiEvent.ShowDialog(null))
                                 },
-                            ) { Text(text = stringResource(R.string.delete)) }
+                            ) {
+                                Text(text = stringResource(R.string.delete))
+                            }
                         },
-                        dismissButton = {
-                            CancelButton(onClick = {
-                                onAction(GeneralPreferencesUiEvent.ShowDialog(value = null))
-                            })
-                        },
+                        dismissButton = { CancelButton(onClick = { onAction(GeneralPreferencesUiEvent.ShowDialog(null)) }) },
                         content = {
                             Text(
                                 text = stringResource(R.string.delete_thumbnail_cache_confirmation),
@@ -149,12 +127,9 @@ private fun GeneralPreferencesScreenContent(
                         },
                     )
                 }
-
                 GeneralPreferencesDialog.ResetSettingsDialog -> {
                     NextDialog(
-                        onDismissRequest = {
-                            onAction(GeneralPreferencesUiEvent.ShowDialog(value = null))
-                        },
+                        onDismissRequest = { onAction(GeneralPreferencesUiEvent.ShowDialog(null)) },
                         title = {
                             Text(
                                 text = stringResource(R.string.reset_settings),
@@ -165,15 +140,13 @@ private fun GeneralPreferencesScreenContent(
                             TextButton(
                                 onClick = {
                                     onAction(GeneralPreferencesUiEvent.ResetSettings)
-                                    onAction(GeneralPreferencesUiEvent.ShowDialog(value = null))
+                                    onAction(GeneralPreferencesUiEvent.ShowDialog(null))
                                 },
-                            ) { Text(text = stringResource(R.string.reset)) }
+                            ) {
+                                Text(text = stringResource(R.string.reset))
+                            }
                         },
-                        dismissButton = {
-                            CancelButton(onClick = {
-                                onAction(GeneralPreferencesUiEvent.ShowDialog(value = null))
-                            })
-                        },
+                        dismissButton = { CancelButton(onClick = { onAction(GeneralPreferencesUiEvent.ShowDialog(null)) }) },
                         content = {
                             Text(
                                 text = stringResource(R.string.reset_settings_confirmation),

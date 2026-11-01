@@ -62,25 +62,25 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(UnstableApi::class)
 @Composable
-fun BoxScope.PlaylistView(modifier: Modifier = Modifier, show: Boolean, player: Player) {
+fun BoxScope.PlaylistView(
+    modifier: Modifier = Modifier,
+    show: Boolean,
+    player: Player,
+) {
     val hapticFeedback = LocalHapticFeedback.current
-    val playlistState = rememberPlaylistState(player = player)
+    val playlistState = rememberPlaylistState(player)
     val lazyListState = rememberLazyListState()
-    val reorderableLazyListState =
-        rememberReorderableLazyListState(lazyListState = lazyListState) { from, to ->
-            playlistState.moveItem(
-                from.index,
-                to.index,
-            )
-            hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
-        }
+    val reorderableLazyListState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        playlistState.moveItem(from.index, to.index)
+        hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+    }
 
     // Auto-scroll to current item when playlist opens
-    LaunchedEffect(key1 = show) {
+    LaunchedEffect(show) {
         if (show && playlistState.timeline.windowCount != 0) {
             val currentIndex = playlistState.currentMediaItemIndex
             if (currentIndex < playlistState.mediaItemCount) {
-                lazyListState.scrollToItem(index = currentIndex)
+                lazyListState.scrollToItem(currentIndex)
             }
         }
     }
@@ -102,9 +102,9 @@ fun BoxScope.PlaylistView(modifier: Modifier = Modifier, show: Boolean, player: 
             ) {
                 items(
                     count = playlistState.mediaItemCount,
-                    key = { index -> playlistState.getMediaItemAt(index = index).mediaId },
+                    key = { index -> playlistState.getMediaItemAt(index).mediaId },
                 ) { index ->
-                    val mediaItem = playlistState.getMediaItemAt(index = index)
+                    val mediaItem = playlistState.getMediaItemAt(index)
                     ReorderableItem(
                         state = reorderableLazyListState,
                         key = mediaItem.mediaId,
@@ -116,8 +116,8 @@ fun BoxScope.PlaylistView(modifier: Modifier = Modifier, show: Boolean, player: 
                             isLastItem = index == playlistState.mediaItemCount - 1,
                             isCurrentItem = isCurrentItem,
                             canDelete = playlistState.mediaItemCount > 1,
-                            onClick = { playlistState.seekToItem(index = index) },
-                            onDelete = { playlistState.removeItem(index = index) },
+                            onClick = { playlistState.seekToItem(index) },
+                            onDelete = { playlistState.removeItem(index) },
                         )
                     }
                 }
@@ -144,9 +144,7 @@ private fun ReorderableCollectionItemScope.PlaylistItemView(
             .fillMaxWidth()
             .draggableHandle(
                 onDragStarted = {
-                    hapticFeedback.performHapticFeedback(
-                        HapticFeedbackType.GestureThresholdActivate,
-                    )
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
                 },
                 onDragStopped = {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
@@ -186,21 +184,13 @@ private fun ReorderableCollectionItemScope.PlaylistItemView(
                 ThumbnailView(
                     mediaItem = mediaItem,
                     modifier = Modifier
-                        .width(
-                            width = min(
-                                100.dp,
-                                b =
-                                    LocalConfiguration.current.screenWidthDp.dp * 0.3f,
-                            ),
-                        ),
+                        .width(min(100.dp, LocalConfiguration.current.screenWidthDp.dp * 0.3f)),
                 )
             }
         },
         content = {
             Text(
-                text = mediaItem.mediaMetadata.title?.toString() ?: stringResource(
-                    R.string.unknown,
-                ),
+                text = mediaItem.mediaMetadata.title?.toString() ?: stringResource(R.string.unknown),
                 maxLines = 2,
                 style = MaterialTheme.typography.titleSmall.copy(lineBreak = LineBreak.Heading),
                 overflow = TextOverflow.Ellipsis,
@@ -221,13 +211,16 @@ private fun ReorderableCollectionItemScope.PlaylistItemView(
 }
 
 @Composable
-private fun ThumbnailView(modifier: Modifier = Modifier, mediaItem: MediaItem) {
+private fun ThumbnailView(
+    modifier: Modifier = Modifier,
+    mediaItem: MediaItem,
+) {
     val context = LocalContext.current
     Box(
         modifier = modifier
             .clip(MaterialTheme.shapes.small)
             .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
-            .aspectRatio(ratio = 16f / 10f),
+            .aspectRatio(16f / 10f),
     ) {
         // Fallback icon
         Icon(
@@ -236,14 +229,14 @@ private fun ThumbnailView(modifier: Modifier = Modifier, mediaItem: MediaItem) {
             tint = MaterialTheme.colorScheme.surfaceColorAtElevation(100.dp),
             modifier = Modifier
                 .align(Alignment.Center)
-                .fillMaxSize(fraction = 0.5f),
+                .fillMaxSize(0.5f),
         )
 
         // Thumbnail image
         AsyncImage(
-            model = ImageRequest.Builder(context = context)
+            model = ImageRequest.Builder(context)
                 .data(mediaItem.mediaId)
-                .crossfade(enable = true)
+                .crossfade(true)
                 .build(),
             contentDescription = null,
             alignment = Alignment.Center,
@@ -255,20 +248,15 @@ private fun ThumbnailView(modifier: Modifier = Modifier, mediaItem: MediaItem) {
         mediaItem.mediaMetadata.durationMs?.let { durationMs ->
             if (durationMs > 0) {
                 Text(
-                    text = Utils.formatDurationMillis(millis = durationMs),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Normal,
-                    ),
+                    text = Utils.formatDurationMillis(durationMs),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Normal),
                     color = Color.White,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(4.dp)
                         .clip(MaterialTheme.shapes.extraSmall)
                         .background(Color.Black.copy(alpha = 0.6f))
-                        .padding(
-                            vertical = 1.dp,
-                            horizontal = 3.dp,
-                        ),
+                        .padding(vertical = 1.dp, horizontal = 3.dp),
                 )
             }
         }
@@ -288,7 +276,7 @@ private fun EmptyPlaylistView() {
             imageVector = NextIcons.Video,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            modifier = Modifier.fillMaxSize(fraction = 0.3f),
+            modifier = Modifier.fillMaxSize(0.3f),
         )
         Text(
             text = stringResource(R.string.no_videos_in_queue),

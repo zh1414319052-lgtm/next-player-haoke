@@ -16,4 +16,10 @@ class DaoModule {
 
     @Factory
     fun providePlaylistDao(db: MediaDatabase) = db.playlistDao()
+
+    @Factory
+    fun provideAnalysisFingerprintDao(db: MediaDatabase) = db.analysisFingerprintDao()
+
+    @Factory
+    fun provideDetectedSegmentDao(db: MediaDatabase) = db.detectedSegmentDao()
 }
