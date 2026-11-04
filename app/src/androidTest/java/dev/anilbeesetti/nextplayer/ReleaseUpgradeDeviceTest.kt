@@ -34,7 +34,7 @@ class ReleaseUpgradeDeviceTest {
         val uri = "file:///__nextplayer_release_upgrade_fixture__/sample.mkv"
         val database = context.getDatabasePath("media_db")
         if (phase == "seed") {
-            assertEquals("Seed must run on the established old formal APK", "0.19.0-haoke.5", version)
+            assertEquals("Seed must run on the established old formal APK", "0.19.0-haoke.6", version)
             assertFalse("Never overwrite existing preferences", app.exists())
             assertFalse("Never overwrite existing preferences", player.exists())
             app.parentFile!!.mkdirs()
@@ -59,7 +59,7 @@ class ReleaseUpgradeDeviceTest {
                 })
             }
         } else {
-            assertEquals("0.19.0-haoke.6", version)
+            assertEquals("0.19.0-haoke.7", version)
             assertTrue("Only operate on this task's fixture", marker.getBoolean("owned", false))
             val preferences = GlobalContext.get().get<PreferencesRepository>()
             if (phase == "cleanup") {

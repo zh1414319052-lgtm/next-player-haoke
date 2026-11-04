@@ -6,6 +6,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.BaseDataSource
 import androidx.media3.datasource.DataSpec
 import dev.anilbeesetti.nextplayer.core.media.network.NetworkClient
+import java.io.EOFException
 import java.io.IOException
 import java.io.InputStream
 import kotlinx.coroutines.runBlocking
@@ -64,7 +65,10 @@ class NetworkDataSource(
             minOf(length.toLong(), bytesRemaining).toInt()
         }
         val bytesRead = stream?.read(buffer, offset, readLength) ?: return C.RESULT_END_OF_INPUT
-        if (bytesRead == -1) return C.RESULT_END_OF_INPUT
+        if (bytesRead == -1) {
+            if (bytesRemaining > 0) throw EOFException("Network stream ended before the requested bytes were read")
+            return C.RESULT_END_OF_INPUT
+        }
 
         if (bytesRemaining != C.LENGTH_UNSET.toLong()) bytesRemaining -= bytesRead
         bytesTransferred(bytesRead)

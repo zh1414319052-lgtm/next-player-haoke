@@ -1,15 +1,16 @@
 # 下一代播放器 / Next Player · 浩科优化版
 
-`next-player-haoke` 保存 **0.19.0-haoke.6（versionCode 81）** 正式版对应的修改源码。
+`next-player-haoke` 保存 **0.19.0-haoke.7（versionCode 82）** 正式版对应的修改源码。
 基于 [Anil Beesetti / Next Player](https://github.com/anilbeesetti/nextplayer) 0.19.0，保留 GPL-3.0 和原作者归属。
 这是独立维护的浩科优化版，未经上游作者背书；上游介绍保留于 [README.upstream.md](README.upstream.md)。
 
-**正式版下载：[浩科工具站 https://haoke.org](https://haoke.org)**
+**正式版下载：[浩科工具站 https://haoke.org](https://haoke.org/software/10cdc544f64e9b91)**
 
 GitHub 用于源码维护；正式安装包请到上述网站查找“下一代播放器”。
 
 ## 本版改动
 
+- 修复局域网 FTP 视频提前结束。读取中断时校验剩余数据，通过 FTP REST 从实际断点续读。
 - 石墨黑与青绿色影院界面，更新媒体库、续播卡片、更多、设置和播放控制栏。
 - 改善运动补偿插帧的边缘锯齿和 4K 分析缩放抗混叠，保留固定 60 帧与两倍模式。
 - 自定义片头、片尾跳过时长，各为 0–1800 整数秒；0 为不跳过该部分。支持保存、取消、关闭保留时长、片头撤销与手动回看。
@@ -27,12 +28,12 @@ DLNA 兼容性取决于电视和局域网。
 
 | 项目 | 值 |
 | --- | --- |
-| 版本 | `0.19.0-haoke.6` / `81` |
+| 版本 | `0.19.0-haoke.7` / `82` |
 | Application ID | `dev.anilbeesetti.nextplayer.haoke` |
 | 已交付架构 | `arm64-v8a` |
 | 系统要求 | Android 7.0+ / minSdk 24 |
 | 正式 APK 字节数 | `33127642` |
-| 正式 APK SHA-256 | `769ba39d655b3178a478ae7cfc8de11114f45ec89d22933e4cbce2cf1962cc38` |
+| 正式 APK SHA-256 | `053a37e7def5357a4717d84a270f7a8317431c12caea7478d42a69f5bc4bce1b` |
 | 正式证书 SHA-256 | `d27867cecea4c6e041195cc87501c4663cefa6a6c6240a0fca835998a87c09f9` |
 
 正式版可同签名覆盖旧浩科正式版；上游版、QA 版使用不同包名和数据。
@@ -50,6 +51,8 @@ Windows 请使用 ASCII 检出路径，避免构建工具对中文路径的兼�
 ```
 
 ARM64 未签名产物为 `app/build/outputs/apk/release/app-arm64-v8a-release-unsigned.apk`。
+构建固定依赖 NextLib 1.11.1-0.16.0，公开源码与构建脚本见 [对应提交](https://github.com/anilbeesetti/nextlib/tree/2dc77cd2d9352bc308aa26782f9c77a320df510b)。
+
 Linux/macOS 使用 `./gradlew`；依赖需要正常下载环境。
 `scripts/sign_release.py` 供维护者读取既有源码外受保护签名身份；仓库不提供私钥、密码或本机凭据，普通贡献者无需正式签名身份。
 
@@ -57,14 +60,9 @@ Linux/macOS 使用 `./gradlew`；依赖需要正常下载环境。
 
 ## 验证范围
 
-- 正式 Release 单元测试 63 项通过，Kotlin 格式检查通过；Release Lint 0 错误、35 项既有警告。
-- 一加 PKG110 / Android 16：17 项不同功能用例通过，覆盖 GPU 图像/时序/回压、同签名升级保留数据、首选语言、签名 feed、原生设置交互及 4K HDR 实际播放。
-- 发布后再次验证正式版接受当前版本的签名更新信息。
-- 此前影院 UI QA 的播放器 111 项及相关布局测试已通过，不计作正式阶段重新执行。
-- 未覆盖所有机型、完整 15 分钟连续播放、真实电视 DLNA、平板分屏、极端字号、所有字幕格式或 16KB 原生页设备。
-
-测试视频副本和辅助包已清理。仓库不包含影视视频、用户媒体库、测试数据库或设备日志。
-设计基准见 [docs/design/CINEMA-UI.md](docs/design/CINEMA-UI.md)，版本身份见 [docs/HAOKE_HANDOFF.json](docs/HAOKE_HANDOFF.json)。
+- 本次版本的媒体模块和正式包单元测试共 156 项通过，Release Lint 0 错误、18 条警告。
+- 实际同签覆盖升级验证了设置和测试播放记录保留。FTP 断流复测使用合成视频和测试服务器。
+- 设计基准见 [docs/design/CINEMA-UI.md](docs/design/CINEMA-UI.md)，版本身份见 [docs/HAOKE_HANDOFF.json](docs/HAOKE_HANDOFF.json)。
 
 ## 更新通知与隐私
 
@@ -80,7 +78,7 @@ Noto Sans SC 字体使用 [SIL OFL 1.1](core/ui/src/main/assets/licenses/Noto-Sa
 
 ## English
 
-Corresponding modified source for Next Player Haoke edition **0.19.0-haoke.6 (81)**, based on Anil Beesetti's Next Player 0.19.0, under GPL-3.0.
-Includes a dark cinema UI, improved interpolation edge anti-aliasing and configurable intro/outro skipping.
-Downloads: **[https://haoke.org](https://haoke.org)**.
+Corresponding modified source for Next Player Haoke edition **0.19.0-haoke.7 (82)**, based on Anil Beesetti's Next Player 0.19.0, under GPL-3.0.
+Repairs premature end of LAN FTP playback by validating the transfer and resuming at the interrupted byte offset.
+Downloads: **[https://haoke.org](https://haoke.org/software/10cdc544f64e9b91)**.
 The upstream project and this independent edition use separate application/signing identities. Release keys, credentials, local SDK paths and user media are not included.

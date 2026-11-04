@@ -2,33 +2,16 @@
   "sourceSkill": "apk-remote-popup",
   "editionType": "haoke_optimized",
   "deliveryStage": "formal",
-  "formalAuthorization": {
-    "date": "2026-11-02",
-    "instruction": "做成正式版"
-  },
   "upstream": "https://github.com/anilbeesetti/nextplayer",
   "upstreamVersion": "0.19.0",
   "license": "GPL-3.0",
-  "versionName": "0.19.0-haoke.6",
-  "versionCode": 81,
-  "applicationId": "dev.anilbeesetti.nextplayer.haoke",
-  "certificateSha256": "d27867cecea4c6e041195cc87501c4663cefa6a6c6240a0fca835998a87c09f9",
-  "websiteSoftwareId": "10cdc544f64e9b91",
+  "versionName": "0.19.0-haoke.7",
+  "versionCode": 82,
   "platform": "Android",
   "channel": "stable",
-  "downloadUrlIsPlaceholder": false,
-  "releaseStatus": "published",
-  "apkSha256": "769ba39d655b3178a478ae7cfc8de11114f45ec89d22933e4cbce2cf1962cc38",
-  "sizeBytes": 33127642,
-  "releaseId": "nextplayer-haoke-0190-6",
-  "websiteRevision": 24,
-  "feedRevision": 6,
-  "publicationOperationId": "nextplayer-haoke6-formal-20261102-01",
-  "publishedAt": "2026-11-01T18:12:53.633Z",
-  "pageUrl": "https://haoke.org/software/10cdc544f64e9b91/releases/nextplayer-haoke-0190-6",
-  "artifactVerification": {
-    "source": "agent-verified-local-package",
-    "remoteVerified": false
-  },
-  "binaryUpload": "user-managed-existing-download-links"
+  "websiteSoftwareId": "10cdc544f64e9b91",
+  "applicationId": "dev.anilbeesetti.nextplayer.haoke",
+  "certificateSha256": "d27867cecea4c6e041195cc87501c4663cefa6a6c6240a0fca835998a87c09f9",
+  "apkSha256": "053a37e7def5357a4717d84a270f7a8317431c12caea7478d42a69f5bc4bce1b",
+  "sizeBytes": 33127642
 }

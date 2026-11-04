@@ -92,7 +92,7 @@ class FormalUiDeviceTest {
         bitmap.recycle()
     }
     @Test fun coldStartSettingsSaveCancelAndRecreationOnFormalApk() {
-        assertEquals("0.19.0-haoke.6", context.packageManager.getPackageInfo(context.packageName, 0).versionName)
+        assertEquals("0.19.0-haoke.7", context.packageManager.getPackageInfo(context.packageName, 0).versionName)
         val activity = instrumentation.startActivitySync(Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
         click("more")
