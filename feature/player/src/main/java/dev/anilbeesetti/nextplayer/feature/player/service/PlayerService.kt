@@ -79,7 +79,6 @@ import dev.anilbeesetti.nextplayer.feature.player.interpolation.InterpolationSta
 import dev.anilbeesetti.nextplayer.feature.player.interpolation.MotionInterpolationEffect
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.DecoderManager
 import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.DecoderMode
-import io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory
 import io.github.anilbeesetti.nextlib.media3ext.renderer.subtitleDelayMilliseconds
 import io.github.anilbeesetti.nextlib.media3ext.renderer.subtitleSpeed
 import io.github.anilbeesetti.nextlib.mediainfo.MediaInfoBuilder
@@ -179,7 +178,9 @@ class PlayerService : MediaSessionService() {
         val frameRate = (player as? ExoPlayer)?.videoFormat?.frameRate ?: -1f
         val reason = when {
             !interpolationPipelineAvailable -> "tunneling"
-            decoderManager.activeVideoMode == DecoderMode.SOFTWARE -> "decoder"
+            (player as? ExoPlayer)?.videoFormat?.isHdrVideo() == true -> "hdr"
+            decoderManager.activeVideoMode == DecoderMode.SOFTWARE ||
+                decoderManager.activeVideoMode == DecoderMode.FFMPEG -> "decoder"
             player != null && player.playbackParameters.speed != 1f -> "speed"
             frameRate > 30.1f || frameRate in 0f..11.7f -> "framerate"
             else -> ""
@@ -928,7 +929,7 @@ class PlayerService : MediaSessionService() {
             }
         }
         decoderManager = DecoderManager()
-        val renderersFactory = NextRenderersFactory(applicationContext)
+        val renderersFactory = HdrRenderersFactory(applicationContext)
             .setDecoderManager(decoderManager)
             // Motion compensation needs the following source frame. Submitting scheduled output
             // earlier returns bounded texture slots sooner while EGL retains the original PTS.

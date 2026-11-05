@@ -605,4 +605,5 @@
     <string name="cinema_permission_generic_help">Enable access to use this feature. You can also change it later in system settings.</string>
     <string name="cinema_history_loading">Loading watch history…</string>
     <string name="cinema_history_unavailable">Watch history could not be loaded. Your videos are still available.</string>
+    <string name="interpolation_hdr">HDR uses native color output. Frame interpolation is currently unavailable for HDR videos.</string>
 </resources>

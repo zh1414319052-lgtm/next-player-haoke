@@ -15,8 +15,8 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         applicationId = "dev.anilbeesetti.nextplayer"
-        versionCode = 82
-        versionName = "0.19.0-haoke.7"
+        versionCode = 83
+        versionName = "0.19.0-haoke.8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -77,6 +77,13 @@ android {
             initWith(getByName("debug"))
             applicationIdSuffix = ".qaftp"
             versionNameSuffix = "-QA-ftp.1"
+            matchingFallbacks.add("debug")
+        }
+
+        create("qaHdr") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".qahdr"
+            versionNameSuffix = "-QA-hdr.1"
             matchingFallbacks.add("debug")
         }
 
@@ -186,7 +193,11 @@ dependencies {
     androidTestImplementation(libs.androidx.media3.exoplayer)
     androidTestImplementation("androidx.media3:media3-extractor:${libs.versions.androidxMedia3.get()}")
     androidTestImplementation(libs.androidx.media3.effect)
-    androidTestImplementation(libs.github.anilbeesetti.nextlib.media3ext)
+    if (providers.gradleProperty("nextlibPath").isPresent) {
+        androidTestImplementation(libs.github.anilbeesetti.nextlib.media3ext)
+    } else {
+        androidTestImplementation(project(":core:decoder"))
+    }
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.rules)

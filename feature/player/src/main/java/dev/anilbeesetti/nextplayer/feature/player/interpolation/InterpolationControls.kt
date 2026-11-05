@@ -104,6 +104,7 @@ fun InterpolationDialog(player: Player?, onDismiss: () -> Unit) {
         "active" -> R.string.interpolation_active
         "tunneling" -> R.string.interpolation_tunneling
         "decoder" -> R.string.interpolation_decoder
+        "hdr" -> R.string.interpolation_hdr
         "speed" -> R.string.interpolation_speed
         "overload" -> R.string.interpolation_overload
         "resolution" -> R.string.interpolation_resolution

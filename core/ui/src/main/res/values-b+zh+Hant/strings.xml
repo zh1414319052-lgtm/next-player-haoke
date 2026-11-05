@@ -585,4 +585,5 @@
     <string name="cinema_permission_generic_help">授权后可以使用此功能，也可以稍后在系统设置中调整。</string>
     <string name="cinema_history_loading">正在加载观看历史…</string>
     <string name="cinema_history_unavailable">暂时无法加载观看历史，你仍可以正常选择视频播放。</string>
+    <string name="interpolation_hdr">HDR 使用原生色彩輸出，暫不支援 HDR 影片插幀。</string>
 </resources>

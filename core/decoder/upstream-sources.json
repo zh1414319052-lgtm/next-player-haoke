@@ -1,0 +1,71 @@
+{
+  "repository": "anilbeesetti/nextlib",
+  "commit": "2dc77cd2d9352bc308aa26782f9c77a320df510b",
+  "artifact": "io.github.anilbeesetti:nextlib-media3ext:1.11.1-0.16.0",
+  "aarSha256": "998b4ff249fd3be3dfe2bf0757d47cb7cd903c4bf02a702efc4789574c679839",
+  "files": [
+    {
+      "path": "media3ext/consumer-rules.pro",
+      "gitBlob": "4ddd6744100b787694a99c9a771f81246751c87b"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/DecoderManager.kt",
+      "gitBlob": "79799b2d2b113e0029165ed8f3a8c95f4bdcced1"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/DecoderMode.kt",
+      "gitBlob": "8ee6e3d3e45c52cf80261c1ba94c39fcd4b5a70b"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/DecoderRendererController.kt",
+      "gitBlob": "12f95e184a55af02b4570881a75c6e0566bd2655"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/FFmpegOnlyRenderersFactory.java",
+      "gitBlob": "a995ef970035f2e5a766650212ec1942091ec0b1"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/FfmpegAudioDecoder.java",
+      "gitBlob": "962a4081391013e8f85b63d402102ae417feef92"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/FfmpegAudioRenderer.java",
+      "gitBlob": "f6ce6c1c032042fa0fdbe1da7893c599004f5b24"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/FfmpegDecoderException.java",
+      "gitBlob": "e8b604ca4fda72f9d5d880783eb95121f84ccbce"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/FfmpegLibrary.java",
+      "gitBlob": "5f0dd7afa476997fef7c5c47539d37d03d6c4eec"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/FfmpegVideoDecoder.java",
+      "gitBlob": "4f60f8d488aa935cf55d94fd5df4546d9d703693"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/FfmpegVideoRenderer.java",
+      "gitBlob": "1406745afebc6c62d766494024665dc66be4fa39"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/NextRenderersFactory.kt",
+      "gitBlob": "59520bac63eaf63c8466c2bf7b2cf92ae5d73185"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/package-info.java",
+      "gitBlob": "92043be2597b86985a0c9a8020c2f1cef5a40e32"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/renderer/NextTextRenderer.kt",
+      "gitBlob": "87be2d78784cbf97db82bc81da248cd20d383a20"
+    },
+    {
+      "path": "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/renderer/OffsetRenderer.kt",
+      "gitBlob": "8ea72eef9462db620cb99238d291fb0acd01bacb"
+    }
+  ],
+  "modified": [
+    "media3ext/src/main/java/io/github/anilbeesetti/nextlib/media3ext/ffdecoder/FfmpegVideoRenderer.java"
+  ]
+}

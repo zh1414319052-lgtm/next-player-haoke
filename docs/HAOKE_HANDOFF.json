@@ -5,13 +5,14 @@
   "upstream": "https://github.com/anilbeesetti/nextplayer",
   "upstreamVersion": "0.19.0",
   "license": "GPL-3.0",
-  "versionName": "0.19.0-haoke.7",
-  "versionCode": 82,
+  "versionName": "0.19.0-haoke.8",
+  "versionCode": 83,
   "platform": "Android",
   "channel": "stable",
   "websiteSoftwareId": "10cdc544f64e9b91",
   "applicationId": "dev.anilbeesetti.nextplayer.haoke",
   "certificateSha256": "d27867cecea4c6e041195cc87501c4663cefa6a6c6240a0fca835998a87c09f9",
-  "apkSha256": "053a37e7def5357a4717d84a270f7a8317431c12caea7478d42a69f5bc4bce1b",
-  "sizeBytes": 33127642
+  "apkSha256": "d5fbf633edef552087de73a72b5528c9c475249a63a485f66c03043cae7bec02",
+  "sizeBytes": 33127642,
+  "sourceTag": "haoke-0.19.0-haoke.8"
 }

@@ -19,6 +19,7 @@ def main():
     parser.add_argument("output", type=Path)
     parser.add_argument("--identity", type=Path, default=Path(os.environ["LOCALAPPDATA"]) / "Haoke/AndroidSigning/nextplayer-release/signing-identity.json")
     parser.add_argument("--build-tools", type=Path, required=True)
+    parser.add_argument("--credential-reference", type=Path, help="Override the nonsecret reference path when application data is redirected")
     args = parser.parse_args()
     identity = json.loads(args.identity.read_text(encoding="utf-8"))
     if identity["applicationId"] != "dev.anilbeesetti.nextplayer.haoke":
@@ -31,7 +32,7 @@ def main():
     package = re.search(r"^package: name='([^']+)'", badging.stdout)
     if badging.returncode or not package or package[1] not in {identity["applicationId"], identity["applicationId"] + ".test"}:
         raise RuntimeError("Input APK is not this product or its isolated device-test package")
-    credential_ref = Path(identity["credentialReference"])
+    credential_ref = args.credential_reference or Path(identity["credentialReference"])
     reference = json.loads(credential_ref.read_text(encoding="utf-8"))
     helper = Path.home() / ".claude/skills/apk-remote-popup/scripts"
     sys.path.insert(0, str(helper))

@@ -1,6 +1,6 @@
 # 下一代播放器 / Next Player · 浩科优化版
 
-`next-player-haoke` 保存 **0.19.0-haoke.7（versionCode 82）** 正式版对应的修改源码。
+`next-player-haoke` 保存 **0.19.0-haoke.8（versionCode 83）** 正式版对应的修改源码。
 基于 [Anil Beesetti / Next Player](https://github.com/anilbeesetti/nextplayer) 0.19.0，保留 GPL-3.0 和原作者归属。
 这是独立维护的浩科优化版，未经上游作者背书；上游介绍保留于 [README.upstream.md](README.upstream.md)。
 
@@ -10,6 +10,8 @@ GitHub 用于源码维护；正式安装包请到上述网站查找“下一代�
 
 ## 本版改动
 
+- 修复 AV1 HDR 被 FFmpeg 错误解码导致的发灰，并修复 HDR 与 SDR 切换时的色彩管线错误。HDR 使用系统原生色彩输出，暂不支持插帧；SDR 插帧保留。
+
 - 修复局域网 FTP 视频提前结束。读取中断时校验剩余数据，通过 FTP REST 从实际断点续读。
 - 石墨黑与青绿色影院界面，更新媒体库、续播卡片、更多、设置和播放控制栏。
 - 改善运动补偿插帧的边缘锯齿和 4K 分析缩放抗混叠，保留固定 60 帧与两倍模式。
@@ -18,7 +20,7 @@ GitHub 用于源码维护；正式安装包请到上述网站查找“下一代�
 - 复用签名版本通知，关于页提供手动检查和开源许可入口。
 
 新安装默认深色影院主题；插帧和跳过默认关闭。升级保留已保存的主题与功能开关。
-插帧适用于硬件解码、1 倍速、12–30 fps、最高 3840×2160；效果和性能受 GPU 与片源影响，复杂运动仍可能有伪影，不保证全程锁定 60 帧。
+插帧适用于 SDR、硬件解码、1 倍速、12–30 fps、最高 3840×2160；效果和性能受 GPU 与片源影响，复杂运动仍可能有伪影，不保证全程锁定 60 帧。
 DLNA 兼容性取决于电视和局域网。
 
 设置跳过：**更多 → 设置 → 播放器 → 设置跳过时长**，保存后开启“自定义跳过片头片尾”。
@@ -28,12 +30,12 @@ DLNA 兼容性取决于电视和局域网。
 
 | 项目 | 值 |
 | --- | --- |
-| 版本 | `0.19.0-haoke.7` / `82` |
+| 版本 | `0.19.0-haoke.8` / `83` |
 | Application ID | `dev.anilbeesetti.nextplayer.haoke` |
 | 已交付架构 | `arm64-v8a` |
 | 系统要求 | Android 7.0+ / minSdk 24 |
 | 正式 APK 字节数 | `33127642` |
-| 正式 APK SHA-256 | `053a37e7def5357a4717d84a270f7a8317431c12caea7478d42a69f5bc4bce1b` |
+| 正式 APK SHA-256 | `d5fbf633edef552087de73a72b5528c9c475249a63a485f66c03043cae7bec02` |
 | 正式证书 SHA-256 | `d27867cecea4c6e041195cc87501c4663cefa6a6c6240a0fca835998a87c09f9` |
 
 正式版可同签名覆盖旧浩科正式版；上游版、QA 版使用不同包名和数据。
@@ -60,7 +62,7 @@ Linux/macOS 使用 `./gradlew`；依赖需要正常下载环境。
 
 ## 验证范围
 
-- 本次版本的媒体模块和正式包单元测试共 156 项通过，Release Lint 0 错误、18 条警告。
+- HDR QA 已完成真机验证；正式签名包的构建、回归和升级验收结果见交付说明。
 - 实际同签覆盖升级验证了设置和测试播放记录保留。FTP 断流复测使用合成视频和测试服务器。
 - 设计基准见 [docs/design/CINEMA-UI.md](docs/design/CINEMA-UI.md)，版本身份见 [docs/HAOKE_HANDOFF.json](docs/HAOKE_HANDOFF.json)。
 
@@ -78,7 +80,7 @@ Noto Sans SC 字体使用 [SIL OFL 1.1](core/ui/src/main/assets/licenses/Noto-Sa
 
 ## English
 
-Corresponding modified source for Next Player Haoke edition **0.19.0-haoke.7 (82)**, based on Anil Beesetti's Next Player 0.19.0, under GPL-3.0.
-Repairs premature end of LAN FTP playback by validating the transfer and resuming at the interrupted byte offset.
+Corresponding modified source for Next Player Haoke edition **0.19.0-haoke.8 (83)**, based on Anil Beesetti's Next Player 0.19.0, under GPL-3.0.
+Fixes washed-out AV1 HDR and HDR/SDR transitions. HDR uses native color output without interpolation; SDR interpolation remains available. Also repairs premature end of LAN FTP playback by validating the transfer and resuming at the interrupted byte offset.
 Downloads: **[https://haoke.org](https://haoke.org/software/10cdc544f64e9b91)**.
 The upstream project and this independent edition use separate application/signing identities. Release keys, credentials, local SDK paths and user media are not included.

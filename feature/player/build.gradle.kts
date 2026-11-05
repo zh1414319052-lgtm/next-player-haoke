@@ -77,7 +77,12 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.ui.compose)
     implementation(libs.androidx.media3.session)
-    implementation(libs.github.anilbeesetti.nextlib.media3ext)
+    // Explicit upstream-development builds retain the existing composite-build override.
+    if (providers.gradleProperty("nextlibPath").isPresent) {
+        implementation(libs.github.anilbeesetti.nextlib.media3ext)
+    } else {
+        implementation(project(":core:decoder"))
+    }
     implementation(libs.github.anilbeesetti.nextlib.mediainfo)
 
     implementation(libs.kotlinx.coroutines.android)
