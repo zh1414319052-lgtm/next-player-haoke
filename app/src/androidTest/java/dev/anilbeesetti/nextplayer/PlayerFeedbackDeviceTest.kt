@@ -46,7 +46,29 @@ class PlayerFeedbackDeviceTest {
             if (condition()) return
             SystemClock.sleep(100)
         }
+        reportRemoteUi("timeout: " + label)
         error("Timed out: " + label)
+    }
+    private fun awaitControlsHidden(label: String) {
+        var hiddenSince = 0L
+        awaitUi(label) {
+            val root = instrumentation.uiAutomation.rootInActiveWindow
+            val hidden = root != null && find(root, this.label("screen_rotation"))?.isVisibleToUser != true
+            val now = SystemClock.elapsedRealtime()
+            if (!hidden) hiddenSince = 0L else if (hiddenSince == 0L) hiddenSince = now
+            // A transient accessibility-tree update is not a settled hidden-controls state.
+            hidden && now - hiddenSince >= 600
+        }
+    }
+    private fun reportRemoteUi(stage: String) {
+        val lines = mutableListOf("remote stage=$stage rotationLabel=" + label("screen_rotation") + " pauseLabel=" + label("play_pause"))
+        fun visit(node: AccessibilityNodeInfo?, depth: Int) {
+            if (node == null || depth > 16) return
+            lines += "  ".repeat(depth) + "text=" + node.text + " desc=" + node.contentDescription + " visible=" + node.isVisibleToUser + " focused=" + node.isFocused + " focusable=" + node.isFocusable + " clickable=" + node.isClickable
+            repeat(node.childCount) { visit(node.getChild(it), depth + 1) }
+        }
+        visit(instrumentation.uiAutomation.rootInActiveWindow, 0)
+        instrumentation.sendStatus(0, android.os.Bundle().apply { putString("stream", "\n" + lines.joinToString("\n") + "\n") })
     }
     private fun find(node: AccessibilityNodeInfo?, label: String): AccessibilityNodeInfo? {
         if (node == null) return null
@@ -107,7 +129,7 @@ class PlayerFeedbackDeviceTest {
 
     @Test fun phoneRemoteKeepsWorkingWithHiddenControls() = withPlayer { activity, player ->
         main { player.play() }
-        awaitUi("controls automatically hidden") { !visible("screen_rotation") }
+        awaitControlsHidden("controls automatically hidden")
         main { player.pause(); player.seekTo(5000) }
         await("hidden paused seek settled") { kotlin.math.abs(player.currentPosition - 5000) < 300 && !player.isPlaying && player.playbackState == androidx.media3.common.Player.STATE_READY }
         assertFalse(activity.isFinishing)
@@ -119,7 +141,7 @@ class PlayerFeedbackDeviceTest {
         key(KeyEvent.KEYCODE_MEDIA_PLAY)
         await("media play") { player.isPlaying }
         awaitUi("media play reveals controls before the next auto hide") { visible("screen_rotation") }
-        awaitUi("hidden while playing") { !visible("screen_rotation") }
+        awaitControlsHidden("hidden while playing")
         key(KeyEvent.KEYCODE_DPAD_CENTER)
         awaitUi("remote reveals controls") { visible("screen_rotation") }
         var nativeFocus = ""

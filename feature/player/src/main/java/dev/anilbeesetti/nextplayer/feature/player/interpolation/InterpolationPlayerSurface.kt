@@ -37,7 +37,12 @@ private class InterpolationVideoSurfaceView(
     private var attachedPlayer: Player? = null
     private var syncGroup: SurfaceSyncGroup? = null
     private var released = false
+    private var pausedSurfaceSizeLocked = false
     private val playerListener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) {
+            updatePausedSurfaceSize()
+        }
+
         override fun onAvailableCommandsChanged(availableCommands: Player.Commands) {
             if (availableCommands.contains(Player.COMMAND_SET_VIDEO_SURFACE)) attachedPlayer?.setVideoSurfaceView(this@InterpolationVideoSurfaceView)
         }
@@ -67,12 +72,43 @@ private class InterpolationVideoSurfaceView(
         holder.addCallback(this)
     }
 
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        // SurfaceView otherwise uses the fixed buffer size as its preferred View size.
+        // Compose measures with AT_MOST: the display must still fill the fitted video bounds.
+        setMeasuredDimension(
+            getDefaultSize(suggestedMinimumWidth, widthMeasureSpec),
+            getDefaultSize(suggestedMinimumHeight, heightMeasureSpec),
+        )
+    }
+
     fun setPlayer(player: Player) {
         if (attachedPlayer === player) return
         detachPlayer()
         attachedPlayer = player
         player.addListener(playerListener)
         if (player.isCommandAvailable(Player.COMMAND_SET_VIDEO_SURFACE)) player.setVideoSurfaceView(this)
+        updatePausedSurfaceSize()
+    }
+
+    /** Keep the queued frame through layout resizes while no new video frames are arriving.
+     * Resizing the buffer queue while paused discards its visible buffer on some devices,
+     * including the SDR effects Surface. Scaling the View can reuse that buffer unchanged.
+     * Resume normal layout sizing once playback resumes; never seek or briefly play to redraw.
+     */
+    private fun updatePausedSurfaceSize() {
+        val player = attachedPlayer
+        val keepFrame = player != null && !player.playWhenReady &&
+            player.playbackState == Player.STATE_READY
+        if (keepFrame && !pausedSurfaceSizeLocked) {
+            val frame = holder.surfaceFrame
+            if (frame.width() > 0 && frame.height() > 0) {
+                holder.setFixedSize(frame.width(), frame.height())
+                pausedSurfaceSizeLocked = true
+            }
+        } else if (!keepFrame && pausedSurfaceSizeLocked) {
+            pausedSurfaceSizeLocked = false
+            holder.setSizeFromLayout()
+        }
     }
 
     private fun detachPlayer() {
@@ -81,6 +117,7 @@ private class InterpolationVideoSurfaceView(
             if (player.isCommandAvailable(Player.COMMAND_SET_VIDEO_SURFACE)) player.clearVideoSurfaceView(this)
         }
         attachedPlayer = null
+        updatePausedSurfaceSize()
     }
 
     fun releasePlayer() {
@@ -94,7 +131,10 @@ private class InterpolationVideoSurfaceView(
 
     override fun surfaceCreated(holder: SurfaceHolder) = onSurfaceAvailable(holder.surface)
 
-    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) = onSurfaceAvailable(holder.surface)
+    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+        onSurfaceAvailable(holder.surface)
+        updatePausedSurfaceSize()
+    }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) = onSurfaceDestroyed(holder.surface)
 

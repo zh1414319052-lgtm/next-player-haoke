@@ -69,3 +69,5 @@ docs/**/*.lock
 .env.*
 
 !docs/PLAYER-FEEDBACK-FIX.md
+
+!docs/PAUSED-ROTATION-FIX.md

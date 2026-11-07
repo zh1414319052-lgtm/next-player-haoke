@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalDensity
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -18,6 +19,7 @@ import androidx.media3.ui.compose.state.rememberPresentationState
 import dev.anilbeesetti.nextplayer.feature.player.extensions.toContentScale
 import dev.anilbeesetti.nextplayer.feature.player.interpolation.InterpolationPlayerSurface
 import dev.anilbeesetti.nextplayer.feature.player.state.PictureInPictureState
+import dev.anilbeesetti.nextplayer.feature.player.state.rememberVideoSurfaceSize
 import dev.anilbeesetti.nextplayer.feature.player.state.VideoZoomAndContentScaleState
 import dev.anilbeesetti.nextplayer.feature.player.ui.ShutterView
 import dev.anilbeesetti.nextplayer.feature.player.ui.SubtitleConfiguration
@@ -34,6 +36,8 @@ fun PlayerContentFrame(
     bottomControlsHeightPx: Int = 0,
 ) {
     val presentationState = rememberPresentationState(player)
+    val videoSize = rememberVideoSurfaceSize(player)
+    val density = LocalDensity.current
     val activity = LocalActivity.current as? PlayerActivity
     Box(modifier.fillMaxSize()) {
         InterpolationPlayerSurface(
@@ -43,11 +47,11 @@ fun PlayerContentFrame(
             modifier = Modifier
                 .resizeWithContentScale(
                     contentScale = videoZoomAndContentScaleState.videoContentScale.toContentScale(),
-                    sourceSizeDp = presentationState.videoSizeDp?.let { size ->
-                        size.copy(
-                            width = with(LocalDensity.current) { size.width.toDp().value },
-                            height = with(LocalDensity.current) { size.height.toDp().value },
-                        )
+                    sourceSizeDp = videoSize.takeIf { it.width > 0 && it.height > 0 }?.let {
+                        val ratio = it.pixelWidthHeightRatio
+                        val width = if (ratio < 1f) it.width * ratio else it.width.toFloat()
+                        val height = if (ratio > 1f) it.height / ratio else it.height.toFloat()
+                        with(density) { Size(width.toDp().value, height.toDp().value) }
                     },
                 )
                 .onGloballyPositioned {
