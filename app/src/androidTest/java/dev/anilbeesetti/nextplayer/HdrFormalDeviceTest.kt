@@ -38,7 +38,10 @@ class HdrFormalDeviceTest {
 
     @Test fun upgradeKeepsExistingData() {
         guard()
-        val marker = context.getSharedPreferences("hdr_release_upgrade_83", 0)
+        val fromVersion = args.getString("upgradeFromVersionCode")?.toLong() ?: 82L
+        val toVersion = args.getString("upgradeToVersionCode")?.toLong() ?: 83L
+        check(fromVersion > 0 && toVersion > fromVersion)
+        val marker = context.getSharedPreferences("formal_release_upgrade_$toVersion", 0)
         val values = sortedMapOf<String, String>()
         for (name in listOf("app_preferences.json", "player_preferences.json")) {
             val file = File(context.filesDir, "datastore/$name")
@@ -57,12 +60,12 @@ class HdrFormalDeviceTest {
         }
         val version = context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode
         if (args.getString("upgradePhase") == "before") {
-            assertEquals(82L, version)
+            assertEquals(fromVersion, version)
             val edit = marker.edit()
             for ((key, value) in values) edit.putString(key, value)
             assertTrue(edit.putBoolean("owned", true).commit())
         } else {
-            assertEquals(83L, version)
+            assertEquals(toVersion, version)
             assertTrue(marker.getBoolean("owned", false))
             for ((key, value) in values) assertEquals("Preserve $key", marker.getString(key, null), value)
             assertTrue(marker.edit().clear().commit())

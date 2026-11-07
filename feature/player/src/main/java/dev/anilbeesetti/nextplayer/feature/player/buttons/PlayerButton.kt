@@ -2,9 +2,8 @@ package dev.anilbeesetti.nextplayer.feature.player.buttons
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,27 +17,20 @@ import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.RippleConfiguration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.dp
 import dev.anilbeesetti.nextplayer.core.common.extensions.isTelevision
 import dev.anilbeesetti.nextplayer.core.ui.components.tvFocusRing
 import dev.anilbeesetti.nextplayer.feature.player.LocalUseMaterialYouControls
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
-import kotlin.time.Duration.Companion.milliseconds
 
 val PlayerButtonBlackAlpha = Color.Black.copy(alpha = 0.3f)
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun PlayerButton(
     modifier: Modifier = Modifier,
@@ -49,34 +41,8 @@ fun PlayerButton(
     contentPadding: PaddingValues = PaddingValues(8.dp),
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val viewConfiguration = LocalViewConfiguration.current
-    val hapticFeedback = LocalHapticFeedback.current
     val context = LocalContext.current
     val isTv = remember { context.isTelevision }
-
-    LaunchedEffect(interactionSource) {
-        var isLongPressClicked = false
-        interactionSource.interactions.collectLatest { interaction ->
-            when (interaction) {
-                is PressInteraction.Press -> {
-                    isLongPressClicked = false
-                    delay(viewConfiguration.longPressTimeoutMillis.milliseconds)
-                    onLongClick?.let {
-                        isLongPressClicked = true
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                        it.invoke()
-                    }
-                }
-
-                is PressInteraction.Release -> {
-                    if (!isLongPressClicked) {
-                        onClick()
-                    }
-                }
-            }
-        }
-    }
 
     val colors = if (LocalUseMaterialYouControls.current) {
         IconButtonDefaults.filledTonalIconButtonColors()
@@ -110,10 +76,10 @@ fun PlayerButton(
                 .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                 .clip(CircleShape)
                 .background(if (enabled) colors.containerColor else colors.disabledContainerColor)
-                .clickable(
-                    interactionSource = interactionSource,
+                .combinedClickable(
                     enabled = enabled,
-                    onClick = {},
+                    onClick = onClick,
+                    onLongClick = onLongClick,
                 )
                 .padding(contentPadding)
                 .tvFocusRing(isTv),

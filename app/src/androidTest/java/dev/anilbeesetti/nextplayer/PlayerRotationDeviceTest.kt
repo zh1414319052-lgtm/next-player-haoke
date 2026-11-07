@@ -56,7 +56,7 @@ class PlayerRotationDeviceTest {
         if (button == null) {
             var x = 0f
             var y = 0f
-            onMain { x = activity.window.decorView.width / 2f; y = activity.window.decorView.height / 2f }
+            onMain { x = activity.window.decorView.width / 2f; y = activity.window.decorView.height * 0.30f }
             val now = SystemClock.uptimeMillis()
             val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, x, y, 0)
             val up = MotionEvent.obtain(now, now + 50, MotionEvent.ACTION_UP, x, y, 0)
@@ -82,7 +82,7 @@ class PlayerRotationDeviceTest {
         val activity = instrumentation.startActivitySync(
             Intent(context, PlayerActivity::class.java).setAction(Intent.ACTION_VIEW)
                 .setDataAndType(Uri.parse(uri), "video/x-matroska")
-                .putExtra("position", 120_000)
+                .putExtra("position", InstrumentationRegistry.getArguments().getString("testPositionMs")?.toIntOrNull() ?: 120_000)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         ) as PlayerActivity
         lateinit var pending: ListenableFuture<MediaController>
@@ -100,6 +100,7 @@ class PlayerRotationDeviceTest {
                 activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
             }
             await("initial portrait window") { activity.window.decorView.height > activity.window.decorView.width }
+            await("paused playback before rotation") { !controller.isPlaying && !controller.playWhenReady }
             var pausedPosition = 0L
             onMain { pausedPosition = controller.currentPosition }
             for (playing in listOf(false, true)) {

@@ -606,4 +606,11 @@
     <string name="cinema_history_loading">Loading watch history…</string>
     <string name="cinema_history_unavailable">Watch history could not be loaded. Your videos are still available.</string>
     <string name="interpolation_hdr">HDR uses native color output. Frame interpolation is currently unavailable for HDR videos.</string>
+    <string name="frame_capture">Save frame</string>
+    <string name="frame_capture_working">Saving…</string>
+    <string name="frame_capture_saved">Frame saved to Pictures/Next Player</string>
+    <string name="frame_capture_saved_document">Frame saved</string>
+    <string name="frame_capture_failed">Could not save this frame. Check storage or try a different video.</string>
+    <string name="frame_capture_unavailable">A seekable video is required. Protected content cannot be captured.</string>
+    <string name="qa_app_name">Next Player (QA)</string>
 </resources>

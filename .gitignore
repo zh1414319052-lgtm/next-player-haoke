@@ -67,3 +67,5 @@ docs/**/*.lock
 *.keystore
 .env
 .env.*
+
+!docs/PLAYER-FEEDBACK-FIX.md

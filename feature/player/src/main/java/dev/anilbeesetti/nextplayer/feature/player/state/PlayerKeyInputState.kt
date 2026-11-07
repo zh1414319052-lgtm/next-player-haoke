@@ -15,6 +15,7 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import dev.anilbeesetti.nextplayer.core.cast.model.CastState
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import kotlin.time.Duration.Companion.seconds
@@ -56,15 +57,38 @@ internal class PlayerKeyInputState(
         private set
 
     private var resetJob: Job? = null
+    private val consumedKeys = mutableSetOf<Key>()
 
     @OptIn(UnstableApi::class)
-    fun onKeyEvent(keyEvent: KeyEvent): Boolean {
+    fun onKeyEvent(
+        keyEvent: KeyEvent,
+        castState: CastState? = null,
+        onCastPlayPause: () -> Unit = {},
+        onCastSeek: (Long) -> Unit = {},
+    ): Boolean {
         if (keyEvent.key == Key.Back && !controls.controlsLocked) {
             if (!controls.controlsVisible) return false // controls already hidden: let BACK exit
             if (keyEvent.type == KeyEventType.KeyUp) controls.hideControls()
             return true
         }
+        if (keyEvent.type == KeyEventType.KeyUp) return consumedKeys.remove(keyEvent.key)
         if (keyEvent.type != KeyEventType.KeyDown) return false
+        val alreadyConsumed = keyEvent.key in consumedKeys
+        // Focus may move between down and up. A consumed press must never release
+        // into a newly visible button, nor activate it through a held-key repeat.
+        if (alreadyConsumed && keyEvent.key !in setOf(Key.DirectionLeft, Key.DirectionRight, Key.MediaFastForward, Key.MediaRewind)) return true
+        val consumed = onKeyDown(keyEvent, castState, onCastPlayPause, onCastSeek)
+        if (consumed) consumedKeys += keyEvent.key
+        return consumed || alreadyConsumed
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun onKeyDown(
+        keyEvent: KeyEvent,
+        castState: CastState?,
+        onCastPlayPause: () -> Unit,
+        onCastSeek: (Long) -> Unit,
+    ): Boolean {
         if (controls.controlsLocked) {
             return when (keyEvent.key) {
                 Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
@@ -74,19 +98,22 @@ internal class PlayerKeyInputState(
 
                 else -> {
                     controls.showControls()
-                    false
+                    keyEvent.key.isPlayerControlKey()
                 }
             }
         }
 
-        fun seekBy(deltaMs: Long) {
-            val duration = player.duration
-            val target = (player.currentPosition + deltaMs).coerceAtLeast(0)
-            player.seekTo(if (duration > 0) target.coerceAtMost(duration) else target)
+        val casting = castState?.takeIf { it.isActive }
+        fun seekBy(deltaMs: Long): Long {
+            val duration = casting?.durationMs ?: player.duration
+            val position = casting?.positionMs ?: player.currentPosition
+            val target = (position + deltaMs).coerceAtLeast(0).let { if (duration > 0) it.coerceAtMost(duration) else it }
+            if (casting != null) onCastSeek(target) else player.seekTo(target)
+            return target
         }
 
         fun togglePlayPause() {
-            if (player.isPlaying) player.pause() else player.play()
+            if (casting != null) onCastPlayPause() else if (player.playWhenReady) player.pause() else player.play()
         }
 
         return when (keyEvent.key) {
@@ -97,13 +124,13 @@ internal class PlayerKeyInputState(
             }
 
             Key.MediaPlay -> {
-                player.play()
+                if (casting == null) player.play() else if (!casting.isPlaying) onCastPlayPause()
                 controls.showControls()
                 true
             }
 
             Key.MediaPause -> {
-                player.pause()
+                if (casting == null) player.pause() else if (casting.isPlaying) onCastPlayPause()
                 controls.showControls()
                 true
             }
@@ -121,13 +148,13 @@ internal class PlayerKeyInputState(
             }
 
             Key.MediaNext -> {
-                player.seekToNext()
+                if (casting == null) player.seekToNext()
                 controls.showControls()
                 true
             }
 
             Key.MediaPrevious -> {
-                player.seekToPrevious()
+                if (casting == null) player.seekToPrevious()
                 controls.showControls()
                 true
             }
@@ -140,8 +167,8 @@ internal class PlayerKeyInputState(
 
             Key.DirectionLeft -> {
                 if (!controls.controlsVisible) {
-                    seekBy(-seekIncrementMs)
-                    showSeekFeedback(-seekIncrementMs)
+                    val position = seekBy(-seekIncrementMs)
+                    showSeekFeedback(-seekIncrementMs, position)
                     true
                 } else {
                     controls.showControls()
@@ -151,8 +178,8 @@ internal class PlayerKeyInputState(
 
             Key.DirectionRight -> {
                 if (!controls.controlsVisible) {
-                    seekBy(seekIncrementMs)
-                    showSeekFeedback(seekIncrementMs)
+                    val position = seekBy(seekIncrementMs)
+                    showSeekFeedback(seekIncrementMs, position)
                     true
                 } else {
                     controls.showControls()
@@ -175,14 +202,15 @@ internal class PlayerKeyInputState(
     }
 
     internal fun cancelPendingReset() {
+        consumedKeys.clear()
         resetJob?.cancel()
         resetJob = null
     }
 
-    private fun showSeekFeedback(deltaMs: Long) {
+    private fun showSeekFeedback(deltaMs: Long, positionMs: Long) {
         if (!isSeeking) seekOffsetMs = 0L
         seekOffsetMs += deltaMs
-        seekPositionMs = player.currentPosition
+        seekPositionMs = positionMs
         isSeeking = true
         resetJob?.cancel()
         resetJob = coroutineScope.launch {
@@ -191,3 +219,10 @@ internal class PlayerKeyInputState(
         }
     }
 }
+
+internal fun Key.isPlayerControlKey(): Boolean = this in setOf(
+    Key.DirectionCenter, Key.Enter, Key.NumPadEnter,
+    Key.DirectionLeft, Key.DirectionRight, Key.DirectionUp, Key.DirectionDown,
+    Key.MediaPlayPause, Key.Spacebar, Key.MediaPlay, Key.MediaPause,
+    Key.MediaFastForward, Key.MediaRewind, Key.MediaNext, Key.MediaPrevious,
+)

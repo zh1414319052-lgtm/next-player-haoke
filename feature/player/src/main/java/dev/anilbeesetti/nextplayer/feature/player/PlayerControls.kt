@@ -82,6 +82,9 @@ fun PlayerControls(
     modifier: Modifier = Modifier,
     middleControlsModifier: Modifier = Modifier,
     onBottomControlsHeightChanged: (Int) -> Unit = {},
+    onCaptureFrameClick: () -> Unit = {},
+    canCaptureFrame: Boolean = false,
+    isCapturingFrame: Boolean = false,
 ) {
     var topHeightPx by remember { mutableIntStateOf(0) }
     var bottomHeightPx by remember { mutableIntStateOf(0) }
@@ -177,6 +180,14 @@ fun PlayerControls(
                         CinemaQuickAction(coreUiR.drawable.ic_subtitle_track, stringResource(coreUiR.string.cinema_subtitles)) {
                             onShowOverlay(OverlayView.SUBTITLE_SELECTOR)
                         }
+                        if (castState?.isActive != true) {
+                            CinemaQuickAction(
+                                coreUiR.drawable.ic_frame_capture,
+                                stringResource(if (isCapturingFrame) coreUiR.string.frame_capture_working else coreUiR.string.frame_capture),
+                                enabled = canCaptureFrame && !isCapturingFrame,
+                                onClick = onCaptureFrameClick,
+                            )
+                        }
                         InterpolationButton(
                             enabled = playerPreferences.frameInterpolationEnabled,
                             onClick = { showInterpolation = true },
@@ -207,8 +218,8 @@ fun PlayerControls(
 }
 
 @Composable
-private fun CinemaQuickAction(icon: Int, label: String, onClick: () -> Unit) {
-    PlayerButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
+private fun CinemaQuickAction(icon: Int, label: String, enabled: Boolean = true, onClick: () -> Unit) {
+    PlayerButton(onClick = onClick, enabled = enabled, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(22.dp))
             Text(label, style = MaterialTheme.typography.labelSmall)

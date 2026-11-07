@@ -70,6 +70,7 @@ dependencies {
     // Media3
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.effect)
+    implementation("androidx.media3:media3-inspector-frame:${libs.versions.androidxMedia3.get()}")
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.exoplayer.dash)
     implementation(libs.androidx.media3.exoplayer.hls)

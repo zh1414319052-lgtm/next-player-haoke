@@ -5,14 +5,43 @@
   "upstream": "https://github.com/anilbeesetti/nextplayer",
   "upstreamVersion": "0.19.0",
   "license": "GPL-3.0",
-  "versionName": "0.19.0-haoke.8",
-  "versionCode": 83,
-  "platform": "Android",
-  "channel": "stable",
-  "websiteSoftwareId": "10cdc544f64e9b91",
+  "versionName": "0.19.0-haoke.9",
+  "versionCode": 84,
   "applicationId": "dev.anilbeesetti.nextplayer.haoke",
   "certificateSha256": "d27867cecea4c6e041195cc87501c4663cefa6a6c6240a0fca835998a87c09f9",
-  "apkSha256": "d5fbf633edef552087de73a72b5528c9c475249a63a485f66c03043cae7bec02",
-  "sizeBytes": 33127642,
-  "sourceTag": "haoke-0.19.0-haoke.8"
+  "websiteSoftwareId": "10cdc544f64e9b91",
+  "platform": "Android",
+  "channel": "stable",
+  "releaseId": "nextplayer-haoke-0190-9",
+  "releaseStatus": "formal-artifact-verified",
+  "pageUrl": "https://haoke.org/software/10cdc544f64e9b91/releases/nextplayer-haoke-0190-9",
+  "artifactVerification": {
+    "source": "agent-verified-local-package",
+    "remoteVerified": false
+  },
+  "binaryUpload": "user-managed-existing-download-links",
+  "apkSha256": "bc2e5bd75ed81f75957a63d38f8a8647d15f22f722e113eedca77e83a2793766",
+  "sizeBytes": 33135947,
+  "sourceRepository": "https://github.com/zh1414319052-lgtm/next-player-haoke",
+  "sourceTag": "haoke-0.19.0-haoke.9",
+  "sourceRelease": "https://github.com/zh1414319052-lgtm/next-player-haoke/releases/tag/haoke-0.19.0-haoke.9",
+  "verification": {
+    "unitTests": 194,
+    "lintErrors": 0,
+    "lintWarnings": 38,
+    "upgradeFromVersionCode": 83,
+    "settingsAndHistoryFingerprintsRetained": true,
+    "dataDirectoryRetained": true,
+    "installedApkHashMatches": true,
+    "device": "OnePlus PKG110 Android 16",
+    "permissionsUnchanged": true,
+    "ffmpegNativeLibrariesUnchanged": 5,
+    "actualBluetoothHardwareTested": false
+  },
+  "previousRelease": {
+    "versionName": "0.19.0-haoke.8",
+    "versionCode": 83,
+    "releaseId": "nextplayer-haoke-0190-8",
+    "apkSha256": "d5fbf633edef552087de73a72b5528c9c475249a63a485f66c03043cae7bec02"
+  }
 }

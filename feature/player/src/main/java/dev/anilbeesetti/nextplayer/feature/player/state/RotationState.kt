@@ -23,9 +23,26 @@ fun rememberRotationState(): RotationState? {
 @Stable
 class RotationState(private val activity: Activity) {
     fun rotate() {
-        activity.requestedOrientation = when (activity.resources.configuration.orientation) {
-            Configuration.ORIENTATION_LANDSCAPE -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-            else -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        // A configuration callback can lag behind the click, especially in a localized
+        // context. Toggle the last requested axis so rapid clicks and recreated controls
+        // cannot repeatedly request the same orientation.
+        val landscape = when (activity.requestedOrientation) {
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE,
+            ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE,
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE,
+            ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE,
+            -> true
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
+            ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT,
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT,
+            ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT,
+            -> false
+            else -> activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        }
+        activity.requestedOrientation = if (landscape) {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         }
     }
 }

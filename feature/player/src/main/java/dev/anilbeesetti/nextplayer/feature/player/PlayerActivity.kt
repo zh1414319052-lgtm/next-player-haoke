@@ -5,6 +5,12 @@ import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
+import androidx.activity.result.contract.ActivityResultContracts
+import dev.anilbeesetti.nextplayer.feature.player.capture.FrameCaptureRequest
+import dev.anilbeesetti.nextplayer.feature.player.capture.VideoFrameCapture
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 import android.view.Surface
 import android.view.WindowManager
 import android.widget.Toast
@@ -71,6 +77,19 @@ internal fun shouldResumeExistingPlayback(
 class PlayerActivity : ComponentActivity() {
 
     private val playlistRepository: PlaylistRepository by inject()
+    private val videoFrameCapture: VideoFrameCapture by inject()
+    var isCapturingFrame by mutableStateOf(false)
+        private set
+    private var pendingFrameCapture: FrameCaptureRequest? = null
+    private val frameDocumentLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("image/png")) { uri ->
+        val request = pendingFrameCapture
+        pendingFrameCapture = null
+        if (uri == null || request == null) {
+            isCapturingFrame = false
+        } else {
+            saveVideoFrame(request, uri)
+        }
+    }
 
     private val viewModel: PlayerViewModel by viewModel { parametersOf(playerOutput()) }
     val playerPreferences get() = viewModel.state.value.playerPreferences
@@ -80,6 +99,19 @@ class PlayerActivity : ComponentActivity() {
     private var isPlaybackFinished = false
     private var playInBackground: Boolean = false
     private var isIntentNew: Boolean = true
+
+    private var playerKeyEventHandler: ((android.view.KeyEvent) -> Boolean)? = null
+
+    internal fun setPlayerKeyEventHandler(handler: (android.view.KeyEvent) -> Boolean) {
+        playerKeyEventHandler = handler
+    }
+
+    internal fun clearPlayerKeyEventHandler(handler: (android.view.KeyEvent) -> Boolean) {
+        if (playerKeyEventHandler === handler) playerKeyEventHandler = null
+    }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean =
+        playerKeyEventHandler?.invoke(event) == true || super.dispatchKeyEvent(event)
 
     private var mediaController by mutableStateOf<MediaController?>(null)
     private lateinit var playerApi: PlayerApi
@@ -194,6 +226,50 @@ class PlayerActivity : ComponentActivity() {
             lifecycleScope.launch { mediaController?.tryDecoderFallback() }
         },
     )
+
+    fun captureVideoFrame() {
+        if (isCapturingFrame) return
+        val player = mediaController ?: return
+        val item = player.currentMediaItem
+        if (item?.localConfiguration == null || !player.isCurrentMediaItemSeekable || item.localConfiguration?.drmConfiguration != null) {
+            Toast.makeText(this, coreUiR.string.frame_capture_unavailable, Toast.LENGTH_LONG).show()
+            return
+        }
+        val request = FrameCaptureRequest(item, player.currentPosition, player.videoSize)
+        isCapturingFrame = true
+        if (Build.VERSION.SDK_INT < 29) {
+            // SAF avoids requiring storage permission on older phones.
+            pendingFrameCapture = request
+            try {
+                frameDocumentLauncher.launch(request.displayName)
+            } catch (_: Exception) {
+                pendingFrameCapture = null
+                isCapturingFrame = false
+                Toast.makeText(this, coreUiR.string.frame_capture_failed, Toast.LENGTH_LONG).show()
+            }
+        } else {
+            saveVideoFrame(request)
+        }
+    }
+
+    private fun saveVideoFrame(request: FrameCaptureRequest, destination: Uri? = null) {
+        lifecycleScope.launch {
+            try {
+                videoFrameCapture.save(request, destination)
+                Toast.makeText(this@PlayerActivity, if (destination == null) coreUiR.string.frame_capture_saved else coreUiR.string.frame_capture_saved_document, Toast.LENGTH_LONG).show()
+            } catch (_: TimeoutCancellationException) {
+                Toast.makeText(this@PlayerActivity, coreUiR.string.frame_capture_failed, Toast.LENGTH_LONG).show()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                Toast.makeText(this@PlayerActivity, coreUiR.string.frame_capture_failed, Toast.LENGTH_LONG).show()
+            } catch (_: OutOfMemoryError) {
+                Toast.makeText(this@PlayerActivity, coreUiR.string.frame_capture_failed, Toast.LENGTH_LONG).show()
+            } finally {
+                isCapturingFrame = false
+            }
+        }
+    }
 
     private suspend fun currentMediaDirectory(): Uri? {
         val uri = mediaController?.currentMediaItem?.localConfiguration?.uri ?: return null

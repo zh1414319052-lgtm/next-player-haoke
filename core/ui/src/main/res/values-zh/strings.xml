@@ -605,4 +605,11 @@
     <string name="cinema_history_loading">正在加载观看历史…</string>
     <string name="cinema_history_unavailable">暂时无法加载观看历史，你仍可以正常选择视频播放。</string>
     <string name="interpolation_hdr">HDR 使用原生色彩输出，暂不支持 HDR 视频插帧。</string>
+    <string name="frame_capture">截取单帧</string>
+    <string name="frame_capture_working">保存中…</string>
+    <string name="frame_capture_saved">画面已保存到相册 Pictures/Next Player</string>
+    <string name="frame_capture_saved_document">画面已保存</string>
+    <string name="frame_capture_failed">单帧保存失败，请检查存储空间或换一个视频重试。</string>
+    <string name="frame_capture_unavailable">请先播放可定位的视频；受保护的内容无法截图。</string>
+    <string name="qa_app_name">下一代播放器（测试版）</string>
 </resources>

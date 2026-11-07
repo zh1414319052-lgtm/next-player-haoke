@@ -1,6 +1,9 @@
 package dev.anilbeesetti.nextplayer.feature.player
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
+import androidx.compose.ui.input.key.key
+import dev.anilbeesetti.nextplayer.feature.player.state.isPlayerControlKey
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -13,6 +16,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.input.InputMode
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -102,22 +111,55 @@ internal fun MediaPlayerControls(
 
     val context = LocalContext.current
     val isTv = remember { context.isTelevision }
+    val activity = LocalActivity.current as? PlayerActivity
+    var remoteInputActive by remember { mutableStateOf(isTv) }
+    val composeView = LocalView.current
+    val inputModeManager = LocalInputModeManager.current
     val rootFocusRequester = remember { FocusRequester() }
     val middleControlsFocusRequester = remember { FocusRequester() }
     val unlockFocusRequester = remember { FocusRequester() }
     var isMiddleControlsFocused by remember { mutableStateOf(false) }
     var isUnlockFocused by remember { mutableStateOf(false) }
-    if (isTv) {
-        LaunchedEffect(controlsVisibilityState.controlsVisible, controlsVisibilityState.controlsLocked, overlayView) {
-            if (overlayView != null) return@LaunchedEffect
-            if (!controlsVisibilityState.controlsVisible) {
-                runCatching { rootFocusRequester.requestFocus() }
-                return@LaunchedEffect
-            }
-            val locked = controlsVisibilityState.controlsLocked
-            val target = if (locked) unlockFocusRequester else middleControlsFocusRequester
-            target.requestFocusUntilLanded(attempts = 20) { if (locked) isUnlockFocused else isMiddleControlsFocused }
+    LaunchedEffect(controlsVisibilityState.controlsVisible, controlsVisibilityState.controlsLocked, overlayView, remoteInputActive, inputModeManager.inputMode) {
+        if (overlayView != null) return@LaunchedEffect
+        val keyboardInput = remoteInputActive && inputModeManager.inputMode == InputMode.Keyboard
+        if (keyboardInput) composeView.requestFocus()
+        if (!controlsVisibilityState.controlsVisible || !remoteInputActive) {
+            rootFocusRequester.requestFocus()
+            return@LaunchedEffect
         }
+        if (!keyboardInput) return@LaunchedEffect
+        val locked = controlsVisibilityState.controlsLocked
+        val target = if (locked) unlockFocusRequester else middleControlsFocusRequester
+        target.requestFocusUntilLanded(attempts = 20) { if (locked) isUnlockFocused else isMiddleControlsFocused }
+    }
+
+    val dispatchPlayerKeyEvent: (KeyEvent) -> Boolean = { keyEvent ->
+        if (overlayView != null) {
+            false
+        } else {
+            if (keyEvent.key.isPlayerControlKey()) {
+                inputModeManager.requestInputMode(InputMode.Keyboard)
+                remoteInputActive = true
+            }
+            keyInputState.onKeyEvent(
+                keyEvent,
+                castState = state.castState,
+                onCastPlayPause = { onAction(PlayerAction.CastTogglePlayPause) },
+                onCastSeek = { onAction(PlayerAction.CastSeekTo(it)) },
+            )
+        }
+    }
+    val currentKeyHandler by rememberUpdatedState(dispatchPlayerKeyEvent)
+    DisposableEffect(activity) {
+        // Native video surfaces and Bluetooth input must not depend on a visible
+        // Compose child retaining Android focus. Leave system keys to the Activity.
+        val handler: (android.view.KeyEvent) -> Boolean = { nativeEvent ->
+            val event = KeyEvent(nativeEvent)
+            event.key.isPlayerControlKey() && currentKeyHandler(event)
+        }
+        activity?.setPlayerKeyEventHandler(handler)
+        onDispose { activity?.clearPlayerKeyEventHandler(handler) }
     }
 
     CompositionLocalProvider(
@@ -127,13 +169,12 @@ internal fun MediaPlayerControls(
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .thenIf(isTv) {
-                    focusRequester(rootFocusRequester)
-                        .focusable()
-                        .onPreviewKeyEvent { keyEvent ->
-                            if (overlayView != null) false else keyInputState.onKeyEvent(keyEvent)
-                        }
-                },
+                .focusRequester(rootFocusRequester)
+                .onPreviewKeyEvent { keyEvent ->
+                    // PlayerActivity has already dispatched these events once.
+                    if (activity != null) false else dispatchPlayerKeyEvent(keyEvent)
+                }
+                .focusable(),
         ) {
             AnimatedVisibility(
                 visible = controlsVisibilityState.controlsVisible && !controlsVisibilityState.controlsLocked,
@@ -216,7 +257,7 @@ internal fun MediaPlayerControls(
             if (controlsVisibilityState.controlsVisible && controlsVisibilityState.controlsLocked) {
                 PlayerLockedControls(
                     onUnlockControls = controlsVisibilityState::unlockControls,
-                    unlockButtonModifier = Modifier.thenIf(isTv) {
+                    unlockButtonModifier = Modifier.thenIf(remoteInputActive) {
                         focusRequester(unlockFocusRequester)
                             .onFocusChanged { isUnlockFocused = it.hasFocus }
                     },
@@ -224,6 +265,9 @@ internal fun MediaPlayerControls(
             } else {
                 PlayerControls(
                     onBottomControlsHeightChanged = onBottomControlsHeightChanged,
+                    onCaptureFrameClick = { activity?.captureVideoFrame() },
+                    canCaptureFrame = activity != null && player.playbackState == Player.STATE_READY && player.isCurrentMediaItemSeekable,
+                    isCapturingFrame = activity?.isCapturingFrame == true,
                     player = player,
                     title = metadataState.title.orEmpty(),
                     playerPreferences = playerPreferences,
@@ -247,7 +291,7 @@ internal fun MediaPlayerControls(
                     onCastPlayPause = { onAction(PlayerAction.CastTogglePlayPause) },
                     onCastSeek = { onAction(PlayerAction.CastSeekTo(it)) },
                     onCastStop = { onAction(PlayerAction.CastStop) },
-                    middleControlsModifier = Modifier.thenIf(isTv) {
+                    middleControlsModifier = Modifier.thenIf(remoteInputActive) {
                         focusRequester(middleControlsFocusRequester)
                             .onFocusChanged { isMiddleControlsFocused = it.hasFocus }
                     },
