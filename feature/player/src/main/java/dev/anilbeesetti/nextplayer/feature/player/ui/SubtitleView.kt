@@ -13,9 +13,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat.getSystemService
 import androidx.media3.common.Player
+import androidx.media3.common.text.Cue
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView
@@ -31,12 +34,29 @@ fun SubtitleView(
     isInPictureInPictureMode: Boolean,
     configuration: SubtitleConfiguration,
     controlsHeightPx: Int = 0,
+    videoBoundsModifier: Modifier = Modifier,
 ) {
     val cuesState = rememberCuesState(player)
     var viewportHeightPx by remember { mutableIntStateOf(0) }
+    val defaultTextSizePx = if (isInPictureInPictureMode) {
+        SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * viewportHeightPx
+    } else {
+        with(LocalDensity.current) { configuration.textSize.sp.toPx() }
+    }
+    val cueGroup = cuesState.currentCues
+    val usesVideoBounds = cueGroup?.cues?.any {
+        it.line != Cue.DIMEN_UNSET || it.position != Cue.DIMEN_UNSET ||
+            it.textSizeType == Cue.TEXT_SIZE_TYPE_FRACTIONAL || it.textSizeType == Cue.TEXT_SIZE_TYPE_FRACTIONAL_IGNORE_PADDING
+    } == true
+    val displayCues = remember(cueGroup, viewportHeightPx, defaultTextSizePx, configuration.applyEmbeddedStyles) {
+        stackSubtitleCues(cueGroup?.cues.orEmpty(), viewportHeightPx, defaultTextSizePx, configuration.applyEmbeddedStyles)
+    }
 
     AndroidView(
-        modifier = modifier.fillMaxSize().onSizeChanged { viewportHeightPx = it.height },
+        modifier = modifier
+            .then(if (usesVideoBounds) videoBoundsModifier else Modifier)
+            .fillMaxSize()
+            .onSizeChanged { viewportHeightPx = it.height },
         factory = { context ->
             SubtitleView(context).apply {
                 val captioningManager = getSystemService(context, CaptioningManager::class.java) ?: return@apply
@@ -62,14 +82,14 @@ fun SubtitleView(
                     setStyle(userStyle)
                     setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, configuration.textSize.toFloat())
                 }
-                setApplyEmbeddedStyles(configuration.applyEmbeddedStyles)
             }
         },
         update = { subtitleView ->
             subtitleView.setBottomPaddingFraction(
-                subtitleBottomPaddingFraction(viewportHeightPx, controlsHeightPx, isInPictureInPictureMode),
+                subtitleBottomPaddingFraction(viewportHeightPx, if (usesVideoBounds) 0 else controlsHeightPx, isInPictureInPictureMode),
             )
-            subtitleView.setCues(cuesState.currentCues?.cues)
+            subtitleView.setApplyEmbeddedStyles(configuration.applyEmbeddedStyles)
+            subtitleView.setCues(displayCues)
             if (isInPictureInPictureMode) {
                 subtitleView.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION)
             } else {

@@ -285,6 +285,10 @@ class PlayerActivity : ComponentActivity() {
                         MimeTypes.APPLICATION_TTML,
                         MimeTypes.TEXT_VTT,
                         MimeTypes.TEXT_SSA,
+                        "application/x-ass",
+                        "application/x-ssa",
+                        // Some Android document providers use this MIME type for .ass.
+                        "audio/aac",
                         MimeTypes.BASE_TYPE_APPLICATION + "/octet-stream",
                         MimeTypes.BASE_TYPE_TEXT + "/*",
                     ),

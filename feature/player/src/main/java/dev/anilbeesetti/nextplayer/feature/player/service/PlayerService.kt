@@ -65,6 +65,7 @@ import dev.anilbeesetti.nextplayer.feature.player.extensions.playbackSpeed
 import dev.anilbeesetti.nextplayer.feature.player.extensions.positionMs
 import dev.anilbeesetti.nextplayer.feature.player.extensions.setExtras
 import dev.anilbeesetti.nextplayer.feature.player.extensions.setIsScrubbingModeEnabled
+import dev.anilbeesetti.nextplayer.feature.player.extensions.selectTrack
 import dev.anilbeesetti.nextplayer.feature.player.extensions.subtitleDelayMilliseconds
 import dev.anilbeesetti.nextplayer.feature.player.extensions.subtitleSpeed
 import dev.anilbeesetti.nextplayer.feature.player.extensions.subtitleTrackIndex
@@ -140,6 +141,7 @@ class PlayerService : MediaSessionService() {
 
     private var isMediaItemReady = false
     private var pendingAudioSelection: Pair<String, Uri>? = null
+    private var pendingSubtitleSelection: Pair<String, String>? = null
 
     private var pendingUndo: SkipRecord? = null
     private var lastOutcome: AnalysisOutcome? = null
@@ -297,6 +299,9 @@ class PlayerService : MediaSessionService() {
             if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) return
             restoreDecoderChoices(mediaItem)
             isMediaItemReady = false
+            if (mediaItem != null && pendingSubtitleSelection?.first != mediaItem.mediaId) {
+                pendingSubtitleSelection = null
+            }
             mediaItem?.mediaMetadata?.let { metadata ->
                 mediaSession?.player?.run {
                     setPlaybackSpeed(metadata.playbackSpeed ?: playerPreferences.defaultPlaybackSpeed)
@@ -365,10 +370,20 @@ class PlayerService : MediaSessionService() {
             serviceScope.launch {
                 mediaSession?.player?.currentTracks?.let(::handleUnsupportedTracks)
             }
+            val player = mediaSession?.player ?: return
+            val pendingSubtitleId = pendingSubtitleSelection
+                ?.takeIf { it.first == player.currentMediaItem?.mediaId }
+                ?.second
+            // Source replacement can report a track set before the new sidecar arrives.
+            // Only consume the request when that exact text track is available.
+            pendingSubtitleId?.let { tracks.externalSubtitleTrack(it) }?.let {
+                pendingSubtitleSelection = null
+                player.selectTrack(it.mediaTrackGroup)
+            }
+
             if (!isMediaItemReady && tracks.groups.isNotEmpty()) {
                 isMediaItemReady = true
 
-                val player = mediaSession?.player ?: return
                 val pending = pendingAudioSelection
                 pendingAudioSelection = null
                 if (pending != null && pending.first == player.currentMediaItem?.mediaId) {
@@ -381,8 +396,8 @@ class PlayerService : MediaSessionService() {
                 mediaSession?.player?.mediaMetadata?.audioTrackIndex?.takeIf { pending == null }?.let {
                     mediaSession?.player?.switchTrack(C.TRACK_TYPE_AUDIO, it)
                 }
-                mediaSession?.player?.mediaMetadata?.subtitleTrackIndex?.let {
-                    mediaSession?.player?.switchTrack(C.TRACK_TYPE_TEXT, it)
+                if (pendingSubtitleId == null) {
+                    player.mediaMetadata.subtitleTrackIndex?.let { player.switchTrack(C.TRACK_TYPE_TEXT, it) }
                 }
             }
         }
@@ -709,30 +724,32 @@ class PlayerService : MediaSessionService() {
                     val subtitleUri = args.getString(CustomCommands.SUBTITLE_TRACK_URI_KEY)?.toUri()
                         ?: return@future SessionResult(SessionError.ERROR_BAD_VALUE)
 
+                    val player = session.player
+                    val currentMediaItem = player.currentMediaItem
+                        ?: return@future SessionResult(SessionError.ERROR_INVALID_STATE)
+                    val subtitleId = subtitleUri.toString()
+                    val loadedTrack = player.currentTracks.externalSubtitleTrack(subtitleId)
+                    if (loadedTrack != null) {
+                        pendingSubtitleSelection = null
+                        player.selectTrack(loadedTrack.mediaTrackGroup)
+                        return@future SessionResult(SessionResult.RESULT_SUCCESS)
+                    }
+
                     val newSubConfiguration = uriToSubtitleConfiguration(
                         uri = subtitleUri,
                         subtitleEncoding = playerPreferences.subtitleTextEncoding,
                     )
-                    mediaSession?.player?.let { player ->
-                        val currentMediaItem = player.currentMediaItem ?: return@let
-                        val textTracks = player.currentTracks.groups.filter {
-                            it.type == C.TRACK_TYPE_TEXT && it.isSupported
-                        }
-
-                        mediaRepository.updateMediumPosition(
-                            uri = currentMediaItem.mediaId,
-                            position = player.currentPosition,
-                        )
-                        mediaRepository.updateMediumSubtitleTrack(
-                            uri = currentMediaItem.mediaId,
-                            subtitleTrackIndex = textTracks.size,
-                        )
-                        mediaRepository.addExternalSubtitleToMedium(
-                            uri = currentMediaItem.mediaId,
-                            subtitleUri = subtitleUri,
-                        )
-                        player.addAdditionalSubtitleConfiguration(newSubConfiguration)
+                    mediaRepository.addExternalSubtitleToMedium(
+                        uri = currentMediaItem.mediaId,
+                        subtitleUri = subtitleUri,
+                    )
+                    if (player.currentMediaItem?.mediaId != currentMediaItem.mediaId) {
+                        return@future SessionResult(SessionError.ERROR_INVALID_STATE)
                     }
+                    // Select the actual track once its source is prepared, even when remembering
+                    // track selections is off or unsupported text tracks precede this one.
+                    pendingSubtitleSelection = currentMediaItem.mediaId to subtitleId
+                    player.addAdditionalSubtitleConfiguration(newSubConfiguration)
                     return@future SessionResult(SessionResult.RESULT_SUCCESS)
                 }
 
@@ -949,7 +966,9 @@ class PlayerService : MediaSessionService() {
             .setTrackSelector(trackSelector)
             .setMediaSourceFactory(
                 ExternalAudioMediaSourceFactory(
-                    DefaultMediaSourceFactory(applicationContext).setDataSourceFactory(dataSourceFactory),
+                    DefaultMediaSourceFactory(applicationContext)
+                        .setDataSourceFactory(dataSourceFactory)
+                        .setSubtitleParserFactory(PlayerSubtitleParserFactory),
                 ),
             )
             .setAudioAttributes(
@@ -1278,7 +1297,8 @@ class PlayerService : MediaSessionService() {
                     }
                 }
                 val localSubs = if (!isNetwork) {
-                    (videoState?.path ?: getPath(uri))?.let {
+                    // A saved playback state's path field contains the URI, not a filesystem path.
+                    (video?.path?.takeIf { it.isNotBlank() } ?: getPath(uri))?.let {
                         File(it).getLocalSubtitles(
                             context = this@PlayerService,
                             excludeSubsList = externalSubs,
@@ -1289,10 +1309,14 @@ class PlayerService : MediaSessionService() {
                 }
 
                 val existingSubConfigurations = mediaItem.localConfiguration?.subtitleConfigurations ?: emptyList()
+                val defaultLocalSubtitle = localSubs.firstOrNull().takeUnless {
+                    existingSubConfigurations.any { it.selectionFlags and C.SELECTION_FLAG_DEFAULT != 0 }
+                }
                 val subConfigurations = (localSubs + externalSubs).map { subtitleUri ->
                     uriToSubtitleConfiguration(
                         uri = subtitleUri,
                         subtitleEncoding = playerPreferences.subtitleTextEncoding,
+                        isSelected = subtitleUri == defaultLocalSubtitle,
                     )
                 }
 
@@ -1568,3 +1592,12 @@ private var Player.playerSpecificSubtitleSpeed: Float
 
 /** Schemes Media3 streams over the network itself, as opposed to reading from local storage. */
 private val REMOTE_SCHEMES = setOf("http", "https", "rtsp")
+
+// MergingMediaPeriod prepends a numeric child index to each Format.id. External
+// audio can add another merge, so strip all leading indices but preserve the URI.
+private val mergedTrackIdPrefix = Regex("^(?:[0-9]+:)+")
+
+private fun Tracks.externalSubtitleTrack(id: String): Tracks.Group? = groups.firstOrNull {
+    it.type == C.TRACK_TYPE_TEXT && it.isSupported &&
+        it.getTrackFormat(0).id?.replaceFirst(mergedTrackIdPrefix, "") == id
+}

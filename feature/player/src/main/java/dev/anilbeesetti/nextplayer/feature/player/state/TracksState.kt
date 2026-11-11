@@ -12,6 +12,7 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.PlayerStateObserver
 import androidx.media3.ui.compose.state.observeState
+import dev.anilbeesetti.nextplayer.feature.player.extensions.selectTrack
 import dev.anilbeesetti.nextplayer.feature.player.extensions.switchTrack
 
 @UnstableApi
@@ -39,7 +40,12 @@ class TracksState(
         }
 
     fun switchTrack(index: Int) {
-        player?.switchTrack(trackType, index)
+        val currentPlayer = player ?: return
+        if (index < 0) {
+            currentPlayer.switchTrack(trackType, index)
+        } else {
+            tracks.getOrNull(index)?.mediaTrackGroup?.let(currentPlayer::selectTrack)
+        }
     }
 
     suspend fun observe() {

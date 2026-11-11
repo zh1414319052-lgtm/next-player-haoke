@@ -6,6 +6,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.TrackGroup
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -44,15 +45,16 @@ fun Player.switchTrack(trackType: @C.TrackType Int, trackIndex: Int) {
         }
 
         Logger.logDebug("Player", "Setting $trackTypeText track: $trackIndex")
-        val trackSelectionOverride = TrackSelectionOverride(tracks[trackIndex].mediaTrackGroup, 0)
-
-        // Override the track selection parameters to force the selection of the specified track.
-        trackSelectionParameters = trackSelectionParameters
-            .buildUpon()
-            .setTrackTypeDisabled(trackType, false)
-            .setOverrideForType(trackSelectionOverride)
-            .build()
+        selectTrack(tracks[trackIndex].mediaTrackGroup)
     }
+}
+
+internal fun Player.selectTrack(group: TrackGroup) {
+    trackSelectionParameters = trackSelectionParameters
+        .buildUpon()
+        .setTrackTypeDisabled(group.type, false)
+        .setOverrideForType(TrackSelectionOverride(group, 0))
+        .build()
 }
 
 @UnstableApi
@@ -75,16 +77,13 @@ fun Player.addAdditionalSubtitleConfiguration(subtitle: MediaItem.SubtitleConfig
         return
     }
 
-    val textTracks = currentTracks.groups.filter {
-        it.type == C.TRACK_TYPE_TEXT && it.isSupported
-    }
     val position = currentPosition
 
     val updateMediaItem = currentMediaItemLocal
         .buildUpon()
         .setSubtitleConfigurations(existingSubConfigurations + listOf(subtitle))
         .build()
-        .copy(positionMs = position, subtitleTrackIndex = textTracks.size)
+        .copy(positionMs = position)
 
     val index = currentMediaItemIndex
     val exoPlayer = this as? ExoPlayer

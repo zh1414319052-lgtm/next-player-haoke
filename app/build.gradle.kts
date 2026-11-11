@@ -15,8 +15,8 @@ android {
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         applicationId = "dev.anilbeesetti.nextplayer"
-        versionCode = 85
-        versionName = "0.19.0-haoke.10"
+        versionCode = 86
+        versionName = "0.19.0-haoke.11"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -83,7 +83,7 @@ android {
         create("qaFeedback") {
             initWith(getByName("debug"))
             applicationIdSuffix = ".qafeedback"
-            versionNameSuffix = "-QA-feedback.1"
+            versionNameSuffix = "-QA-subtitles.2"
             matchingFallbacks.add("debug")
         }
 

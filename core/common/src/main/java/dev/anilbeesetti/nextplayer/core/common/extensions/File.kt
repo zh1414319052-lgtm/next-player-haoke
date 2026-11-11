@@ -13,8 +13,9 @@ suspend fun File.getSubtitles(): List<File> = withContext(Dispatchers.IO) {
     val subtitleExtensions = listOf("srt", "ssa", "ass", "vtt", "ttml")
 
     subtitleExtensions.mapNotNull { extension ->
-        val file = File(parentDir, "$mediaName.$extension")
-        file.takeIf { it.exists() && it.isFile }
+        sequenceOf(extension, extension.uppercase())
+            .map { File(parentDir, "$mediaName.$it") }
+            .firstOrNull { it.isFile }
     }
 }
 

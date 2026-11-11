@@ -1,14 +1,14 @@
 # 下一代播放器 / Next Player · 浩科优化版
 
-**0.19.0-haoke.10（85）**，基于 [Anil Beesetti / Next Player](https://github.com/anilbeesetti/nextplayer) 0.19.0 的独立维护版本，保留 GPL-3.0、原作者和第三方归属；未经上游作者背书。上游说明见 [README.upstream.md](README.upstream.md)。
+**0.19.0-haoke.11（86）**，基于 [Anil Beesetti / Next Player](https://github.com/anilbeesetti/nextplayer) 0.19.0 的独立维护版本，保留 GPL-3.0、原作者和第三方归属；未经上游作者背书。上游说明见 [README.upstream.md](README.upstream.md)。
 
-**[正式版下载：浩科工具站](https://haoke.org/software/10cdc544f64e9b91)** · [本版更新说明](https://haoke.org/software/10cdc544f64e9b91/releases/nextplayer-haoke-0190-10)
+**[正式版下载：浩科工具站](https://haoke.org/software/10cdc544f64e9b91)** · [本版更新说明](https://haoke.org/software/10cdc544f64e9b91/releases/nextplayer-haoke-0190-11)
 
 GitHub 提供对应源码，不托管 APK。网站的固定网盘入口由站长维护。
 
 ## 本版修复
 
-修复视频暂停后旋转屏幕画面变黑，以及保留暂停帧时横屏画面缩小的问题。暂停位置保持不动，无需短暂播放或跳帧来刷新。正确处理视频尺寸回调缺失、旋转和非方形像素；恢复播放后回到正常 Surface 布局。实现及验收边界见 [PAUSED-ROTATION-FIX.md](docs/PAUSED-ROTATION-FIX.md)。
+修复中日双语字幕在同一位置叠字，两种语言现在分行显示。修复外挂 ASS/SSA 字幕无法显示的问题，支持同名自动加载和手动选择。跨过字幕空档拖动进度条、拖回上一句或重新续播时，会恢复当前应显示的字幕。ARM64，Android 7.0 及以上。 实现与验收边界见 [字幕修复记录](docs/SUBTITLE-FIX.md)。
 
 ## 保留的功能
 
@@ -27,14 +27,14 @@ GitHub 提供对应源码，不托管 APK。网站的固定网盘入口由站长
 
 | 项目 | 值 |
 | --- | --- |
-| 版本 | 0.19.0-haoke.10 / 85 |
+| 版本 | 0.19.0-haoke.11 / 86 |
 | Application ID | dev.anilbeesetti.nextplayer.haoke |
 | 系统 / 架构 | Android 7.0+，minSdk 24，arm64-v8a |
-| APK 字节数 | 33135947 |
-| APK SHA-256 | ea2a2fc16ca6d398d87cf0d60ab7c70078ef59d9d8984eab0d3a93868e8ea3fd |
+| APK 字节数 | 33152331 |
+| APK SHA-256 | eb2862e06efc0e822d904ac831e8605a306af3222a0c1c5d8dd5a886d4f31327 |
 | 正式证书 SHA-256 | d27867cecea4c6e041195cc87501c4663cefa6a6c6240a0fca835998a87c09f9 |
 
-沿用原正式签名，可覆盖已有浩科正式版；上游版和 QA 版使用独立身份及数据。正式包非 debuggable / 非 testOnly，签名与 16 KB ZIP 对齐通过。13 项权限及 10 个原生库与 .9 正式版一致。
+沿用原正式签名，可覆盖已有浩科正式版；上游版和 QA 版使用独立身份及数据。正式包非 debuggable / 非 testOnly，签名与 16 KB ZIP 对齐通过。13 项权限及 10 个原生库与 .10 正式版功能一致，指纹库仅 ELF 构建标识不同。
 
 ## 构建与验证
 
@@ -46,10 +46,10 @@ Kotlin / Jetpack Compose 多模块工程。实际验证使用 JDK 21、JVM targe
 
 Linux/macOS 使用 ./gradlew。ARM64 未签名包位于 app/build/outputs/apk/release/app-arm64-v8a-release-unsigned.apk；自行测试可构建 :app:assembleQaFeedback，使用独立 QA 包名。正式签名脚本 [scripts/sign_release.py](scripts/sign_release.py) 只读取维护者在源码外的受保护身份；仓库不含正式私钥或凭据。
 
-- 本次 198 项相关自动测试通过：应用 63、播放器 131、公共层 2、解码层 2。Release Lint：0 错误、38 警告。正式签名 R8 包构建与归档检查通过。
-- 修复的 QA 包已在一加 PKG110 / Android 16 完成普通 SDR、配置 60 fps 插帧和 HLG HDR 共 27 次方向切换，以及暂停 seek、前后台返回和续播；隐藏控件后的遥控原生按键检查连续两轮通过。
-- **按用户本轮要求，最终 .10 正式包没有安装到真机，未执行 84→85 覆盖升级及正式包运行验收。QA 的真机证据不等同于最终正式包真机测试。** 临时验收辅助程序已卸载，手机仍保留 .9 正式版。
-- 语言复用系统首选 zh → 简体中文、en/其他 → 英文；本次无新增 UI 文案，QA 连续旋转资源检查通过，未更改系统语言。未验证全部品牌手机、Android 14、电视或实际蓝牙遥控器配对。
+- 本次 202 项相关自动测试通过。Release Lint 0 错误、17 条警告。正式包签名与 16 KB 对齐已验证。
+- 在一加 PKG110 / Android 16 上使用独立 QA 包和自制字幕验证中日双语分行、外挂 ASS 自动与手动加载、跨空档跳转、拖回首句、末尾清空及重新续播。
+- 正式 APK 已核对覆盖升级所需的包名、签名证书及版本递增。按本项目此前的正式包交付要求，未在真机安装最终 APK。
+- 语言沿用系统首选语言 zh → 简体中文、en/其他 → 英文，QA 语言用例通过。
 
 单帧导出使用 Media3 1.11.1 inspector-frame。解码扩展来源和构建材料见 [core/decoder/README.md](core/decoder/README.md)，固定 Nextlib 源码为 [2dc77cd2d9352bc308aa26782f9c77a320df510b](https://github.com/anilbeesetti/nextlib/tree/2dc77cd2d9352bc308aa26782f9c77a320df510b)。本版未新增依赖或改变原生库。
 
@@ -61,12 +61,12 @@ Linux/macOS 使用 ./gradlew。ARM64 未签名包位于 app/build/outputs/apk/re
 
 ## English
 
-Next Player Haoke **0.19.0-haoke.10 (85)** is an independently maintained GPL-3.0 edition based on Anil Beesetti's Next Player 0.19.0. This release fixes blank paused video after rotation and an undersized landscape picture while retaining the paused frame, without briefly playing or seeking to redraw.
+Next Player Haoke **0.19.0-haoke.11 (86)** is an independently maintained GPL-3.0 edition based on Anil Beesetti's Next Player 0.19.0. Fixes overlapping Chinese and Japanese subtitle lines so both remain readable. Restores automatic and manual loading of external ASS/SSA subtitles. Active subtitles now reappear when seeking across a gap, seeking backward, or resuming playback. ARM64, Android 7.0 or later.
 
-It retains native HDR playback, optional SDR interpolation, clean decoded PNG frame export, hidden-control remote input, FTP resume, configurable intro/outro skipping and DLNA casting. Burned-in subtitles cannot be removed; exported HDR frames become SDR. Interpolation performance and hardware compatibility vary.
+It retains native HDR playback, optional SDR interpolation, clean decoded PNG frame export, hidden-control remote input, FTP resume, configurable intro/outro skipping and DLNA casting. Burned-in subtitles cannot be removed. Interpolation performance and hardware compatibility vary.
 
-The ARM64 release requires Android 7.0+, keeps the existing application/signing identity and uses versionCode 85. APK: 33135947 bytes; SHA-256: ea2a2fc16ca6d398d87cf0d60ab7c70078ef59d9d8984eab0d3a93868e8ea3fd. The certificate fingerprint is listed above. 198 relevant automated tests passed; Release Lint has 0 errors and 38 warnings. The QA fix passed 27 rotations plus paused seeking, foreground return and resume on OnePlus PKG110 / Android 16; native remote-key injection passed twice.
+The ARM64 release requires Android 7.0+. The signing certificate and application ID match the previous formal release, and the build number increases to 86. APK size is 33152331 bytes and its SHA-256 is `eb2862e06efc0e822d904ac831e8605a306af3222a0c1c5d8dd5a886d4f31327`. All 202 relevant automated tests passed. Release Lint reported 0 errors and 17 warnings.
 
-**At the user's request, this final signed .10 APK was not installed or runtime-tested on a physical device, and the 84-to-85 upgrade was not exercised.** QA device results are reported separately. Paired Bluetooth remotes, TVs and other devices remain untested. Existing Chinese/English primary-language mapping is retained.
+Synthetic ASS and SRT playback tests passed on a OnePlus PKG110 running Android 16 with the isolated QA build. The final signed APK was checked for upgrade compatibility and was not installed on the phone, following the project's earlier formal delivery instruction.
 
-[Download from Haoke Tools](https://haoke.org/software/10cdc544f64e9b91). This repository and its version tag provide corresponding source; no APK binaries or release credentials are hosted here.
+[Download from Haoke Tools](https://haoke.org/software/10cdc544f64e9b91). This repository and its version tag provide corresponding source. The fixed cloud-drive link is maintained by the site owner.

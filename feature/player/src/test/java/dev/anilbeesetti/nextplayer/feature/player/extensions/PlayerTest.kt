@@ -73,7 +73,7 @@ class PlayerTest {
                 })
             }
             assertEquals(2, player.currentMediaItem?.localConfiguration?.subtitleConfigurations?.size)
-            assertEquals(0, player.mediaMetadata.subtitleTrackIndex)
+            assertEquals(null, player.mediaMetadata.subtitleTrackIndex)
 
             val currentItem = player.currentMediaItem
             createdItems.clear()
