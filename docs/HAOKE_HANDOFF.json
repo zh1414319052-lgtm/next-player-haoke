@@ -25,7 +25,7 @@
   "websiteSoftwareId": "10cdc544f64e9b91",
   "releaseId": "nextplayer-haoke-0190-12",
   "pageUrl": "https://haoke.org/software/10cdc544f64e9b91/releases/nextplayer-haoke-0190-12",
-  "releaseStatus": "release-candidate",
+  "releaseStatus": "published",
   "binaryUpload": "user-managed existing links; remote file not verified",
   "verification": {
     "versionCode": 87,
@@ -42,7 +42,19 @@
     "lintErrors": 0,
     "lintWarnings": 38,
     "archiveSecretFiles": [],
-    "upgradeCompatibility": "same applicationId and signing certificate, versionCode increases 86 to 87; formal package not installed"
+    "upgradeCompatibility": "same applicationId and signing certificate, versionCode increases 86 to 87; formal package not installed",
+    "publicFeed": {
+      "websiteRevision": 37,
+      "feedRevision": 12,
+      "publishedAt": "2026-11-14T09:11:30.945Z",
+      "pageUrl": "https://haoke.org/software/10cdc544f64e9b91/releases/nextplayer-haoke-0190-12",
+      "keyId": "haoke-updates-000ef7a45a5a58d5",
+      "signatureValid": true,
+      "artifactVerified": true,
+      "linksPreserved": true,
+      "remoteFileVerified": false
+    },
+    "browserVisual": "Edge verified public GitHub About/README/Release and Haoke version, notes and source link"
   },
   "qaVerification": {
     "languageTests": 2,
@@ -67,5 +79,12 @@
     "formalDeviceInstall": "not performed",
     "realTelevision": "not tested",
     "reporterDevice": "not tested"
-  }
+  },
+  "sourceCommit": "a46f56e94960148cd911a14488037d50365243c5",
+  "sourceFilesVerified": 950,
+  "sourceBranch": "main",
+  "websiteRevision": 37,
+  "feedRevision": 12,
+  "publishedAt": "2026-11-14T09:11:30.945Z",
+  "publicationOperationId": "nextplayer-haoke12-cast-20261114-01"
 }
