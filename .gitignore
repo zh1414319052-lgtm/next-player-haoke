@@ -71,3 +71,5 @@ docs/**/*.lock
 !docs/PLAYER-FEEDBACK-FIX.md
 
 !docs/PAUSED-ROTATION-FIX.md
+
+!docs/CAST-FIX.md

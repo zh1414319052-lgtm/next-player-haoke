@@ -5,8 +5,9 @@ import android.net.wifi.WifiManager
 import dev.anilbeesetti.nextplayer.core.cast.model.DlnaDevice
 import java.net.DatagramPacket
 import java.net.DatagramSocket
-import java.net.InetAddress
 import java.net.HttpURLConnection
+import java.net.InetAddress
+import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
@@ -29,14 +30,14 @@ import kotlinx.coroutines.withContext
 class DlnaDiscovery(private val context: Context) {
 
     /** Emits the current renderer list until the collecting scope is cancelled. */
-    fun discover(): Flow<List<DlnaDevice>> = callbackFlow {
+    fun discover(): Flow<List<DlnaDevice>> = resolveDlnaDevices(discoverLocations(), ::loadDevice)
+
+    private fun discoverLocations(): Flow<String> = callbackFlow {
         val lock = acquireMulticastLock()
         val socket = DatagramSocket().apply {
             soTimeout = RESPONSE_POLL_MS
             broadcast = true
         }
-        val found = LinkedHashMap<String, DlnaDevice?>()
-        val fetchJobs = mutableListOf<kotlinx.coroutines.Job>()
         val searchJob = launch(Dispatchers.IO) {
             runCatching { sendSearch(socket, MEDIA_RENDERER_ST) }
             runCatching { sendSearch(socket, SSDP_ALL) }
@@ -51,20 +52,15 @@ class DlnaDiscovery(private val context: Context) {
                         socket.receive(packet)
                     } catch (_: SocketTimeoutException) {
                         continue
+                    } catch (error: SocketException) {
+                        // Closing the sheet cancels this job and closes a blocking receive.
+                        // Android reports EBADF here; it is normal cancellation, not scan failure.
+                        if (!isActive) break
+                        throw error
                     }
                     val text = String(packet.data, packet.offset, packet.length, Charsets.ISO_8859_1)
                     val location = parseSsdpResponseLocation(text) ?: continue
-                    val key = parseSsdpResponseUsn(text) ?: location
-                    synchronized(found) {
-                        if (found.containsKey(key)) return@synchronized
-                        found[key] = null
-                    }
-                    fetchJobs += launch(Dispatchers.IO) {
-                        val device = loadDevice(location)
-                        synchronized(found) { found[key] = device }
-                        val resolved = synchronized(found) { found.values.filterNotNull() }
-                        if (resolved.isNotEmpty()) send(resolved.sortedBy { it.name })
-                    }
+                    send(location)
                 }
             } finally {
                 socket.close()
@@ -73,9 +69,8 @@ class DlnaDiscovery(private val context: Context) {
         awaitClose {
             searchJob.cancel()
             receiveJob.cancel()
-            fetchJobs.forEach { it.cancel() }
             runCatching { socket.close() }
-            lock.release()
+            runCatching { lock.release() }
         }
     }
 

@@ -21,7 +21,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -31,12 +30,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.anilbeesetti.nextplayer.core.cast.model.CastState
 import dev.anilbeesetti.nextplayer.core.cast.model.DlnaDevice
+import dev.anilbeesetti.nextplayer.core.cast.model.discoveryKey
+import dev.anilbeesetti.nextplayer.core.cast.model.mergeDlnaDevices
 import dev.anilbeesetti.nextplayer.core.ui.R
 import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
 import dev.anilbeesetti.nextplayer.feature.player.PlayerAction
 import dev.anilbeesetti.nextplayer.feature.player.PlayerViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 /**
@@ -45,7 +49,6 @@ import kotlinx.coroutines.launch
  * session, with an explicit confirmation when the TV did not report support
  * for the media format.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CastDeviceSheet(
     viewModel: PlayerViewModel,
@@ -55,21 +58,48 @@ fun CastDeviceSheet(
     onDismiss: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val deviceFlow = remember(viewModel) { viewModel.castDevices }
+    CastDeviceSheet(
+        deviceFlow = deviceFlow,
+        castState = state.castState,
+        probeDevice = viewModel::probeCastDevice,
+        checkCompatibility = { viewModel.castCompatibility(it, castUri, castTitle, castDurationMs) },
+        startCast = { viewModel.onAction(PlayerAction.CastStart(it, castUri, castTitle, castDurationMs)) },
+        stopCast = { viewModel.onAction(PlayerAction.CastStop) },
+        onDismiss = onDismiss,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CastDeviceSheet(
+    deviceFlow: Flow<List<DlnaDevice>>,
+    castState: CastState,
+    probeDevice: suspend (String) -> DlnaDevice?,
+    checkCompatibility: suspend (DlnaDevice) -> Pair<Boolean?, String>,
+    startCast: (DlnaDevice) -> Unit,
+    stopCast: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     val scope = rememberCoroutineScope()
-    val devices = remember { mutableStateListOf<DlnaDevice>() }
+    var devices by remember { mutableStateOf(emptyList<DlnaDevice>()) }
     var scanning by remember { mutableStateOf(true) }
     var manualIp by remember { mutableStateOf("") }
     var probing by remember { mutableStateOf(false) }
     var pendingDevice by remember { mutableStateOf<DlnaDevice?>(null) }
     var pendingMime by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) {
-        runCatching {
-            viewModel.castDevices.collect { list ->
-                devices.clear()
-                devices.addAll(list)
+    LaunchedEffect(deviceFlow) {
+        try {
+            deviceFlow.collect { list ->
+                devices = mergeDlnaDevices(devices, list)
                 scanning = false
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // Keep manual results and allow a new scan when the sheet is reopened.
+            scanning = false
         }
     }
     // Discovery only emits when a renderer resolves; stop the spinner eventually.
@@ -77,10 +107,8 @@ fun CastDeviceSheet(
         delay(DISCOVERY_SETTLE_MS)
         scanning = false
     }
-    LaunchedEffect(Unit) {
-        viewModel.state.collect {
-            if (it.castState.isActive) onDismiss()
-        }
+    LaunchedEffect(castState.isActive) {
+        if (castState.isActive) onDismiss()
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -90,7 +118,7 @@ fun CastDeviceSheet(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 8.dp),
             )
-            state.castState.error?.let { error ->
+            castState.error?.let { error ->
                 Text(
                     text = stringResource(R.string.cast_failed, error.message),
                     color = MaterialTheme.colorScheme.error,
@@ -113,22 +141,18 @@ fun CastDeviceSheet(
                     modifier = Modifier.padding(vertical = 16.dp),
                 )
                 else -> LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp)) {
-                    items(devices, key = { it.udn }) { device ->
+                    items(devices, key = { it.discoveryKey }) { device ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
                                     scope.launch {
-                                        val (incompatible, mime) = viewModel.castCompatibility(
-                                            device, castUri, castTitle, castDurationMs,
-                                        )
+                                        val (incompatible, mime) = checkCompatibility(device)
                                         if (incompatible == true) {
                                             pendingMime = mime
                                             pendingDevice = device
                                         } else {
-                                            viewModel.onAction(
-                                                PlayerAction.CastStart(device, castUri, castTitle, castDurationMs),
-                                            )
+                                            startCast(device)
                                         }
                                     }
                                 }
@@ -168,11 +192,18 @@ fun CastDeviceSheet(
                         if (host.isEmpty() || probing) return@TextButton
                         probing = true
                         scope.launch {
-                            viewModel.probeCastDevice(host)?.let { found ->
-                                if (devices.none { it.udn == found.udn }) devices.add(found)
-                                scanning = false
+                            try {
+                                probeDevice(host)?.let { found ->
+                                    devices = mergeDlnaDevices(devices, listOf(found))
+                                    scanning = false
+                                }
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (_: Exception) {
+                                // A failed address must not crash the picker or disable retries.
+                            } finally {
+                                probing = false
                             }
-                            probing = false
                         }
                     },
                     enabled = manualIp.isNotBlank() && !probing,
@@ -183,10 +214,10 @@ fun CastDeviceSheet(
 
             TextButton(
                 onClick = {
-                    viewModel.onAction(PlayerAction.CastStop)
+                    stopCast()
                     onDismiss()
                 },
-                enabled = state.castState.isActive,
+                enabled = castState.isActive,
                 modifier = Modifier.padding(bottom = 16.dp),
             ) {
                 Text(text = stringResource(R.string.cast_stop))
@@ -201,7 +232,7 @@ fun CastDeviceSheet(
             text = { Text(stringResource(R.string.cast_likely_incompatible_message, pendingMime)) },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.onAction(PlayerAction.CastStart(device, castUri, castTitle, castDurationMs))
+                    startCast(device)
                     pendingDevice = null
                 }) { Text(stringResource(R.string.cast_try_anyway)) }
             },
